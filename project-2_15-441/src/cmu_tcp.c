@@ -102,7 +102,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_ack;
         uint8_t flags = get_flags(hdr);
-        int acked = get_ack(hdr) == seq;
+        int acked = get_ack(hdr) == (seq + 1);
 
         if (flags == SYN_ACK_FLAG_MASK) {
           if (acked) {
@@ -173,7 +173,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
           uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
 
           cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
-          int acked = (get_ack(hdr_two) == seq);
+          int acked = (get_ack(hdr_two) == (seq + 1));
 
           free(pkt_ack_recv);
 
