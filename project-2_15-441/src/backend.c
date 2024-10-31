@@ -137,7 +137,7 @@ void send_ack(cmu_socket_t *sock, uint8_t *pkt) {
  */
 uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
   cmu_tcp_header_t hdr;
-  uint8_t *pkt;
+  uint8_t *pkt = NULL;
   
   socklen_t conn_len = sizeof(sock->conn);
   ssize_t len = 0;

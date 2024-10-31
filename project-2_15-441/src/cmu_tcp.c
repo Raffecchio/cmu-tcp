@@ -12,8 +12,6 @@
  */
 
 #include "cmu_tcp.h"
-#include "backend.h"
-#include "cmu_packet.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -23,6 +21,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "backend.h"
+#include "cmu_packet.h"
 
 int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                const int port, const char *server_ip) {
@@ -98,24 +98,24 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       while (1) {
         sendto(sockfd, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
                conn_len);
-        free(pkt_syn);
+        
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_ack;
         uint8_t flags = get_flags(hdr);
-
         int acked = get_ack(hdr) == seq;
-        
+
         if (flags == SYN_ACK_FLAG_MASK) {
           if (acked) {
             // TO-DO refactor these next two lines
             // test and see if it's incrementing the ack correctly
-            set_plen(hdr, get_hlen(hdr) + 1); 
+            set_plen(hdr, get_hlen(hdr) + 1);
             send_ack(sock, pkt_syn_ack);
             free(pkt_syn_ack);
+            free(pkt_syn);
             break;
-        } 
+          }
         }
-          free(pkt_syn_ack);
+        free(pkt_syn_ack);
       }
 
     case TCP_LISTENER:
@@ -134,10 +134,13 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       sock->conn = conn;
       while (1) {
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
+
         cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_recv;
         uint32_t seq_sent = get_seq(hdr);
         uint8_t flags = get_flags(hdr);
         free(pkt_syn_recv);
+     
+
         if (flags == SYN_FLAG_MASK) {
           // Initiator handshake
           size_t conn_len = sizeof(sock->conn);
@@ -157,17 +160,21 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
               create_packet(src, dst, seq, ack, hlen, plen, flags, adv_window,
                             ext_len, ext_data, payload, payload_len);
 
-          sendto(sockfd, pkt_syn_ack_send, plen, 0, (struct sockaddr *)&(sock->conn),
-                 conn_len);
+          sendto(sockfd, pkt_syn_ack_send, plen, 0,
+                 (struct sockaddr *)&(sock->conn), conn_len);
           free(pkt_syn_ack_send);
           uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
+
           cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
           int acked = (get_ack(hdr_two) == seq);
-          free(pkt_ack_recv); 
+
+          free(pkt_ack_recv);
+
           if (acked) {
             break;
           }
         }
+      
       }
       break;
 
