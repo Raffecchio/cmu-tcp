@@ -22,7 +22,7 @@ void functionality(cmu_socket_t *sock) {
   uint8_t buf[9898];
   int read;
   FILE *fp;
-
+  
   cmu_write(sock, "hi there", 8);
   cmu_write(sock, " https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
   cmu_write(sock, " https://www.youtube.com/watch?v=Yb6dZ1IFlKc", 44);
@@ -64,7 +64,7 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
-
+  printf("here...opening socket\n");
   if (cmu_socket(&socket, TCP_INITIATOR, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }

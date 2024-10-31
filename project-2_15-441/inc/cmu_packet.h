@@ -32,6 +32,7 @@ typedef struct {
   uint8_t extension_data[];    // Extension data.
 } __attribute__((__packed__)) cmu_tcp_header_t;
 
+#define SYN_ACK_FLAG_MASK 0x12
 #define SYN_FLAG_MASK 0x8
 #define ACK_FLAG_MASK 0x4
 #define FIN_FLAG_MASK 0x2

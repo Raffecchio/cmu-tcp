@@ -13,6 +13,12 @@
  * operations separately from the application.
  */
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "cmu_packet.h"
+#include "cmu_tcp.h"
+
 #ifndef PROJECT_2_15_441_INC_BACKEND_H_
 #define PROJECT_2_15_441_INC_BACKEND_H_
 
@@ -23,4 +29,7 @@
  */
 void* begin_backend(void* in);
 
+uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags);
+int has_been_acked(cmu_socket_t *sock, uint32_t seq);
+void send_ack(cmu_socket_t *sock, uint8_t *pkt);
 #endif  // PROJECT_2_15_441_INC_BACKEND_H_

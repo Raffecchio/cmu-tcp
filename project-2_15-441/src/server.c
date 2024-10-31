@@ -66,7 +66,7 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
-
+  printf("server opening socket server");
   if (cmu_socket(&socket, TCP_LISTENER, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }

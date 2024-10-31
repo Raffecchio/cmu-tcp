@@ -12,6 +12,8 @@
  */
 
 #include "cmu_tcp.h"
+#include "backend.h"
+#include "cmu_packet.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -21,15 +23,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "backend.h"
 
 int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                const int port, const char *server_ip) {
+  printf("mow");
   int sockfd, optval;
   socklen_t len;
   struct sockaddr_in conn, my_addr;
   len = sizeof(my_addr);
-
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0) {
     perror("ERROR opening socket");
@@ -58,7 +59,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
     perror("ERROR condition variable not set\n");
     return EXIT_ERROR;
   }
-
   switch (socket_type) {
     case TCP_INITIATOR:
       if (server_ip == NULL) {
@@ -78,8 +78,45 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         perror("ERROR on binding");
         return EXIT_ERROR;
       }
+      // Initiator handshake;
+      size_t conn_len = sizeof(sock->conn);
+      uint16_t payload_len = 0;
+      uint16_t src = my_addr.sin_port;
+      uint16_t dst = ntohs(sock->conn.sin_port);
+      uint32_t seq = rand();
+      uint32_t ack = 0;
+      uint16_t hlen = sizeof(cmu_tcp_header_t);
+      uint16_t plen = hlen + payload_len;
+      uint8_t flags = SYN_FLAG_MASK;
+      uint16_t adv_window = CP1_WINDOW_SIZE;
+      uint16_t ext_len = 0;
+      uint8_t *ext_data = NULL;
+      uint8_t *payload = NULL;
+      uint8_t *pkt_syn =
+          create_packet(src, dst, seq, ack, hlen, plen, flags, adv_window,
+                        ext_len, ext_data, payload, payload_len);
+      while (1) {
+        sendto(sockfd, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
+               conn_len);
+        free(pkt_syn);
+        uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
+        cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_ack;
+        uint8_t flags = get_flags(hdr);
 
-      break;
+        int acked = get_ack(hdr) == seq;
+        
+        if (flags == SYN_ACK_FLAG_MASK) {
+          if (acked) {
+            // TO-DO refactor these next two lines
+            // test and see if it's incrementing the ack correctly
+            set_plen(hdr, get_hlen(hdr) + 1); 
+            send_ack(sock, pkt_syn_ack);
+            free(pkt_syn_ack);
+            break;
+        } 
+        }
+          free(pkt_syn_ack);
+      }
 
     case TCP_LISTENER:
       memset(&conn, 0, sizeof(conn));
@@ -95,6 +132,43 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         return EXIT_ERROR;
       }
       sock->conn = conn;
+      while (1) {
+        uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
+        cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_recv;
+        uint32_t seq_sent = get_seq(hdr);
+        uint8_t flags = get_flags(hdr);
+        free(pkt_syn_recv);
+        if (flags == SYN_FLAG_MASK) {
+          // Initiator handshake
+          size_t conn_len = sizeof(sock->conn);
+          uint16_t payload_len = 0;
+          uint16_t src = my_addr.sin_port;
+          uint16_t dst = ntohs(sock->conn.sin_port);
+          uint32_t seq = rand();
+          uint32_t ack = seq_sent + 1;
+          uint16_t hlen = sizeof(cmu_tcp_header_t);
+          uint16_t plen = hlen + payload_len;
+          uint8_t flags = SYN_ACK_FLAG_MASK;
+          uint16_t adv_window = CP1_WINDOW_SIZE;
+          uint16_t ext_len = 0;
+          uint8_t *ext_data = NULL;
+          uint8_t *payload = NULL;
+          uint8_t *pkt_syn_ack_send =
+              create_packet(src, dst, seq, ack, hlen, plen, flags, adv_window,
+                            ext_len, ext_data, payload, payload_len);
+
+          sendto(sockfd, pkt_syn_ack_send, plen, 0, (struct sockaddr *)&(sock->conn),
+                 conn_len);
+          free(pkt_syn_ack_send);
+          uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
+          cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
+          int acked = (get_ack(hdr_two) == seq);
+          free(pkt_ack_recv); 
+          if (acked) {
+            break;
+          }
+        }
+      }
       break;
 
     default:
@@ -103,7 +177,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   }
   getsockname(sockfd, (struct sockaddr *)&my_addr, &len);
   sock->my_port = ntohs(my_addr.sin_port);
-
+  // on opening the socket the backend begins
   pthread_create(&(sock->thread_id), NULL, begin_backend, (void *)sock);
   return EXIT_SUCCESS;
 }
@@ -138,13 +212,18 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
     perror("ERROR negative length");
     return EXIT_ERROR;
   }
-
+  // locking recv_lock, returns non-zero on error
   while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {
   }
 
   switch (flags) {
     case NO_FLAG:
       while (sock->received_len == 0) {
+        // idea is that when the client/server goes to read they set the NO_FLAg
+        // this sets the wait-cond
+        //
+        // this should resume once pthread_cond_signal(&(sock->wait_cond)) is
+        // called in the other method (as in hey! there's something received...)
         pthread_cond_wait(&(sock->wait_cond), &(sock->recv_lock));
       }
     // Fall through.
