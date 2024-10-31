@@ -98,7 +98,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       while (1) {
         sendto(sockfd, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
                conn_len);
-        
+
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt_syn_ack;
         uint8_t flags = get_flags(hdr);
@@ -106,10 +106,18 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
         if (flags == SYN_ACK_FLAG_MASK) {
           if (acked) {
-            // TO-DO refactor these next two lines
-            // test and see if it's incrementing the ack correctly
-            set_plen(hdr, get_hlen(hdr) + 1);
-            send_ack(sock, pkt_syn_ack);
+            cmu_tcp_header_t *hdr_ack = (cmu_tcp_header_t *)pkt_syn_ack;
+            socklen_t conn_len_ack = sizeof(sock->conn);
+            uint32_t seq_ack = sock->window.last_ack_received;
+            uint16_t plen_ack = hlen + 0;
+            uint8_t *response_packet_ack = create_packet(
+                sock->my_port, ntohs(sock->conn.sin_port), seq,
+                get_seq(hdr_ack) + 1, sizeof(cmu_tcp_header_t), hlen + 0,
+                ACK_FLAG_MASK, 1, 0, NULL, NULL, 0);
+
+            sendto(sock->socket, response_packet_ack, plen_ack, 0,
+                   (struct sockaddr *)&(sock->conn), conn_len_ack);
+            free(response_packet_ack);
             free(pkt_syn_ack);
             free(pkt_syn);
             break;
@@ -139,7 +147,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         uint32_t seq_sent = get_seq(hdr);
         uint8_t flags = get_flags(hdr);
         free(pkt_syn_recv);
-     
 
         if (flags == SYN_FLAG_MASK) {
           // Initiator handshake
@@ -174,7 +181,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
             break;
           }
         }
-      
       }
       break;
 
