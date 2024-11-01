@@ -66,22 +66,7 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
       break;
     }
     default: {
-        send_ack(sock, pkt);
-      }
-    }
-  }
-
-/**
- * Sends ack to sender.
- *
-* @param sock The socket used for handling packets received.
- * @param pkt The packet data received by the socket.
- *
- */
-void send_ack(cmu_socket_t *sock, uint8_t *pkt) {
-    cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt;
-
-  socklen_t conn_len = sizeof(sock->conn);
+      socklen_t conn_len = sizeof(sock->conn);
       uint32_t seq = sock->window.last_ack_received;
 
       // No payload.
@@ -120,8 +105,9 @@ void send_ack(cmu_socket_t *sock, uint8_t *pkt) {
         memcpy(sock->received_buf + sock->received_len, payload, payload_len);
         sock->received_len += payload_len;
       }
-}
-
+      }
+    }
+  }
 
 /**
  * 
@@ -281,6 +267,7 @@ void *begin_backend(void *in) {
       sock->sending_buf = NULL;
       // unlock send_lock
       pthread_mutex_unlock(&(sock->send_lock));
+      printf("single send\n");
       single_send(sock, data, buf_len);
       free(data);
     } else {
