@@ -83,6 +83,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       uint16_t payload_len = 0;
       uint16_t src = my_addr.sin_port;
       uint16_t dst = ntohs(sock->conn.sin_port);
+      srand(time(NULL));
       uint32_t seq_syn_sent = rand();
       uint32_t ack = 0;
       uint16_t hlen = sizeof(cmu_tcp_header_t);
@@ -139,6 +140,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         return EXIT_ERROR;
       }
       sock->conn = conn;
+      srand(time(NULL));
       while (1) {
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
 
