@@ -60,7 +60,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   }
   switch (socket_type) {
     case TCP_INITIATOR:
-      printf("in initiator...\n");
       if (server_ip == NULL) {
         perror("ERROR server_ip NULL");
         return EXIT_ERROR;
@@ -78,7 +77,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         perror("ERROR on binding");
         return EXIT_ERROR;
       }
-         printf("enter handshake\n");
       // Initiator handshake;
       size_t conn_len = sizeof(sock->conn);
       uint16_t payload_len = 0;
@@ -90,7 +88,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       uint16_t hlen = sizeof(cmu_tcp_header_t);
       uint16_t plen = hlen + payload_len;
       uint8_t flags = SYN_FLAG_MASK;
-      printf("flags %d\n", flags);
       uint16_t adv_window = CP1_WINDOW_SIZE;
       uint16_t ext_len = 0;
       uint8_t *ext_data = NULL;
@@ -103,16 +100,10 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                conn_len);
 
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
-        printf("just got waht should be syn ack packet recv\n");
         cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
-        printf("checking syn_ack header\n");
         uint8_t flags = get_flags(hdr_syn_ack_recv);
-        printf("checking header flags:%d\n", flags);
-        printf("ack num%d\n", printf("just got waht should be syn ack packet recv\n"));
         int acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
-        printf("about to check flag is _syn ack:%d\n", flags);
         if (flags == (SYN_FLAG_MASK | ACK_FLAG_MASK)) {
-          printf("client here recv syn_ack\n");
           if (acked) {
             sock->window.last_ack_received = get_ack(hdr_syn_ack_recv);
             sock->window.next_seq_expected = get_seq(hdr_syn_ack_recv) + 1;
@@ -140,7 +131,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       conn.sin_family = AF_INET;
       conn.sin_addr.s_addr = htonl(INADDR_ANY);
       conn.sin_port = htons((uint16_t)port);
-      printf("LISTENER...\n");
       optval = 1;
       setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval,
                  sizeof(int));
@@ -151,16 +141,15 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       sock->conn = conn;
       srand(time(NULL));
       while (1) {
-        printf("IN LOOP...\n");
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
-        printf("received syn...\n");
         cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
         uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
         uint8_t flags = get_flags(hdr_syn_recv);
         free(pkt_syn_recv);
 
         if (flags == SYN_FLAG_MASK) {
-          printf("jus got syn flag mask...\n");
+
+          while (1) {
           // SYN_ACKING - SYN_FLAG_MASK
           size_t conn_len = sizeof(sock->conn);
           uint16_t payload_len = 0;
@@ -170,9 +159,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
           uint32_t ack = seq_syn_recv + 1;
           uint16_t hlen = sizeof(cmu_tcp_header_t);
           uint16_t plen = hlen + payload_len;
-          printf("about to creat syn_flag etc...\n");
           uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
-          printf("sending syn_ack...%d\n", flags);
           uint16_t adv_window = CP1_WINDOW_SIZE;
           uint16_t ext_len = 0;
           uint8_t *ext_data = NULL;
@@ -180,10 +167,8 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
           uint8_t *pkt_syn_ack_send = create_packet(
               src, dst, seq_syn_ack_sent, ack, hlen, plen, flags, adv_window,
               ext_len, ext_data, payload, payload_len);
-          printf("created syn_ack packet\n");
           sendto(sockfd, pkt_syn_ack_send, plen, 0,
                  (struct sockaddr *)&(sock->conn), conn_len);
-          printf("sent syn_ack_acked\n");
           free(pkt_syn_ack_send);
           uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
 
@@ -197,6 +182,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
             sock->window.last_ack_received = get_ack(hdr_two);
             sock->window.next_seq_expected = get_seq(hdr_two) + 1;
             break;
+          }
           }
           }
         }
