@@ -26,7 +26,6 @@
 
 int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                const int port, const char *server_ip) {
-  printf("mow");
   int sockfd, optval;
   socklen_t len;
   struct sockaddr_in conn, my_addr;
@@ -99,7 +98,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       while (1) {
         sendto(sockfd, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
                conn_len);
-
+               
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
         uint8_t flags = get_flags(hdr_syn_ack_recv);
@@ -125,6 +124,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         }
         free(pkt_syn_ack);
       }
+      break;
 
     case TCP_LISTENER:
       memset(&conn, 0, sizeof(conn));

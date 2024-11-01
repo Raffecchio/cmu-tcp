@@ -55,7 +55,7 @@ int main() {
   char *serverip;
   char *serverport;
   cmu_socket_t socket;
-
+  
   serverip = getenv("server15441");
   if (!serverip) {
     serverip = "10.0.1.1";
@@ -66,7 +66,6 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
-  printf("server opening socket server");
   if (cmu_socket(&socket, TCP_LISTENER, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }
