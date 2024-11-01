@@ -111,7 +111,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
             uint32_t seq_syn_ack_recv = get_seq(hdr_syn_ack_recv);
             uint8_t *response_packet_ack = create_packet(
                 src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
-                ACK_FLAG_MASK, 1, 0, NULL, NULL, 0);
+                ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
             printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
             sendto(sock->socket, response_packet_ack, plen, 0,
                    (struct sockaddr *)&(sock->conn), conn_len_ack);
@@ -139,8 +139,9 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         return EXIT_ERROR;
       }
       sock->conn = conn;
-      srand(time(NULL));
+
       while (1) {
+        srand(time(NULL));
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
         uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
@@ -148,43 +149,44 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         free(pkt_syn_recv);
 
         if (flags == SYN_FLAG_MASK) {
-
           while (1) {
-          // SYN_ACKING - SYN_FLAG_MASK
-          size_t conn_len = sizeof(sock->conn);
-          uint16_t payload_len = 0;
-          uint16_t src = my_addr.sin_port;
-          uint16_t dst = ntohs(sock->conn.sin_port);
-          uint32_t seq_syn_ack_sent = rand();
-          uint32_t ack = seq_syn_recv + 1;
-          uint16_t hlen = sizeof(cmu_tcp_header_t);
-          uint16_t plen = hlen + payload_len;
-          uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
-          uint16_t adv_window = CP1_WINDOW_SIZE;
-          uint16_t ext_len = 0;
-          uint8_t *ext_data = NULL;
-          uint8_t *payload = NULL;
-          uint8_t *pkt_syn_ack_send = create_packet(
-              src, dst, seq_syn_ack_sent, ack, hlen, plen, flags, adv_window,
-              ext_len, ext_data, payload, payload_len);
-          sendto(sockfd, pkt_syn_ack_send, plen, 0,
-                 (struct sockaddr *)&(sock->conn), conn_len);
-          free(pkt_syn_ack_send);
-          uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
+            // SYN_ACKING - SYN_FLAG_MASK
+            size_t conn_len = sizeof(sock->conn);
+            uint16_t payload_len = 0;
+            uint16_t src = my_addr.sin_port;
+            uint16_t dst = ntohs(sock->conn.sin_port);
+            uint32_t seq_syn_ack_sent = rand();
+            uint32_t ack = seq_syn_recv + 1;
+            uint16_t hlen = sizeof(cmu_tcp_header_t);
+            uint16_t plen = hlen + payload_len;
+            uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
+            uint16_t adv_window = CP1_WINDOW_SIZE;
+            uint16_t ext_len = 0;
+            uint8_t *ext_data = NULL;
+            uint8_t *payload = NULL;
+            uint8_t *pkt_syn_ack_send = create_packet(
+                src, dst, seq_syn_ack_sent, ack, hlen, plen, flags, adv_window,
+                ext_len, ext_data, payload, payload_len);
+            sendto(sockfd, pkt_syn_ack_send, plen, 0,
+                   (struct sockaddr *)&(sock->conn), conn_len);
+            free(pkt_syn_ack_send);
+            uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
 
-          cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
-          
-          int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
+            cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
+            
+            int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
 
-          free(pkt_ack_recv);
-          if(get_flags(hdr_two) == ACK_FLAG_MASK) {
-          if (syn_ack_acked) {
-            sock->window.last_ack_received = get_ack(hdr_two);
-            sock->window.next_seq_expected = get_seq(hdr_two) + 1;
-            break;
+            free(pkt_ack_recv);
+            if (get_flags(hdr_two) == ACK_FLAG_MASK) {
+              if (syn_ack_acked) {
+                sock->window.last_ack_received = get_ack(hdr_two);
+                sock->window.next_seq_expected = get_seq(hdr_two) + 1;
+                break;
+              }
+            }
+
           }
-          }
-          }
+          break;
         }
       }
       break;
