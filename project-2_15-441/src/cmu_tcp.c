@@ -171,7 +171,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                    (struct sockaddr *)&(sock->conn), conn_len);
             free(pkt_syn_ack_send);
             uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
-
+            if(pkt_ack_recv != NULL) {
             cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
             
             int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
@@ -183,6 +183,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                 sock->window.next_seq_expected = get_seq(hdr_two) + 1;
                 break;
               }
+            }
             }
 
           }

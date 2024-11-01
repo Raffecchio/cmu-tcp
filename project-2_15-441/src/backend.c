@@ -56,7 +56,6 @@ int has_been_acked(cmu_socket_t *sock, uint32_t seq) {
 void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
   cmu_tcp_header_t *hdr = (cmu_tcp_header_t *)pkt;
   uint8_t flags = get_flags(hdr);
-
   switch (flags) {
     case ACK_FLAG_MASK: {
       uint32_t ack = get_ack(hdr);
@@ -162,6 +161,7 @@ uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
                    (struct sockaddr *)&(sock->conn), &conn_len);
       buf_size = buf_size + n;
     }
+      
   }
   return pkt;
 }
@@ -180,8 +180,9 @@ void check_for_data_wrapper(cmu_socket_t *sock, cmu_read_mode_t flags) {
   }
 
   uint8_t *pkt = check_for_data(sock, flags);
-
+  if(pkt != NULL) {
   handle_message(sock, pkt);
+  }
   free(pkt);
   pthread_mutex_unlock(&(sock->recv_lock));
 }
@@ -273,7 +274,6 @@ void *begin_backend(void *in) {
     } else {
       pthread_mutex_unlock(&(sock->send_lock));
     }
-
     // regardless of (write) buf_len - check for data
     // no wait is of type cmu_read_mode_t, Return immediately if no data is available
     check_for_data_wrapper(sock, NO_WAIT);
