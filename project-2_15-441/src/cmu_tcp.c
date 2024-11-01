@@ -102,9 +102,10 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
         uint8_t flags = get_flags(hdr_syn_ack_recv);
-        int acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
+        // received syn_ack;
         if (flags == (SYN_FLAG_MASK | ACK_FLAG_MASK)) {
-          if (acked) {
+        int syn_ack_acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
+          if (syn_ack_acked) {
             sock->window.last_ack_received = get_ack(hdr_syn_ack_recv);
             sock->window.next_seq_expected = get_seq(hdr_syn_ack_recv) + 1;
             socklen_t conn_len_ack = sizeof(sock->conn);
@@ -115,7 +116,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
             printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
             sendto(sock->socket, response_packet_ack, plen, 0,
                    (struct sockaddr *)&(sock->conn), conn_len_ack);
-
             free(response_packet_ack);
             free(pkt_syn_ack);
             free(pkt_syn);
@@ -178,7 +178,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
             free(pkt_ack_recv);
             if (get_flags(hdr_two) == ACK_FLAG_MASK) {
-              if (syn_ack_acked) {
+              if (syn_ack_acked && get_plen(hdr_two)) {
                 sock->window.last_ack_received = get_ack(hdr_two);
                 sock->window.next_seq_expected = get_seq(hdr_two) + 1;
                 break;
