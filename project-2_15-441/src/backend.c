@@ -62,7 +62,9 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
       if (after(ack, sock->window.last_ack_received)) {
         sock->window.last_ack_received = ack;
       }
-      break;
+      if (get_payload_len(pkt) == 0) {
+        break;
+      }
     }
     default: {
       socklen_t conn_len = sizeof(sock->conn);
