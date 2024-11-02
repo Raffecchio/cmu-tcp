@@ -148,7 +148,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       sock->conn = conn;
 
       while (1) {
-        srand(time(NULL));
+        
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
         uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
@@ -158,6 +158,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
         if (flags == SYN_FLAG_MASK) {
           while (1) {
+            srand(time(NULL));
             // SYN_ACKING - SYN_FLAG_MASK
             size_t conn_len = sizeof(sock->conn);
             uint16_t payload_len = 0;
