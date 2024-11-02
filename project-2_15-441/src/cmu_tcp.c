@@ -77,14 +77,15 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         perror("ERROR on binding");
         return EXIT_ERROR;
       }
-
+      int loop = 0;
       while (1) {
         // Initiator handshake;
         size_t conn_len = sizeof(sock->conn);
         uint16_t payload_len = 0;
         uint16_t src = my_addr.sin_port;
         uint16_t dst = ntohs(sock->conn.sin_port);
-        srand(time(NULL) + 117);
+        srand(time(NULL) + 117 + loop);
+        loop += 1;
         uint32_t seq_syn_sent = rand();
         printf("CLIENT init seq %d\n", seq_syn_sent);
         uint32_t ack = 0;
@@ -157,13 +158,16 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         free(pkt_syn_recv);
 
         if (flags == SYN_FLAG_MASK) {
+          int loop = 1;
           while (1) {
-            srand(time(NULL));
+            
             // SYN_ACKING - SYN_FLAG_MASK
             size_t conn_len = sizeof(sock->conn);
             uint16_t payload_len = 0;
             uint16_t src = my_addr.sin_port;
             uint16_t dst = ntohs(sock->conn.sin_port);
+            srand(time(NULL) + loop);
+            loop += 1;
             uint32_t seq_syn_ack_sent = rand();
             printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
             uint32_t ack = seq_syn_recv + 1;
