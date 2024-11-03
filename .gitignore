@@ -10,3 +10,9 @@ project-2_15-441/tests/testing_server
 **/handin.tar.gz
 **/*.pcap
 !**/test.pcap
+**/Python-3.12.7/**
+**/**/**.yml
+*.pdf
+**/**/**/*.py
+**/**/**/*.plist
+**/tests/**/**/*
