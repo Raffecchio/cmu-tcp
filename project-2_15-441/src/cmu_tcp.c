@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "backend.h"
@@ -229,6 +230,8 @@ int cmu_close(cmu_socket_t *sock) {
 
   int received_fin = 0;
   int received_fin_ack = 0;
+  clock_t start_time = NULL;
+  clock_t end_time = NULL;
   while (1) {
     // Initiator handshake;
     size_t conn_len = sizeof(sock->conn);
@@ -283,10 +286,20 @@ int cmu_close(cmu_socket_t *sock) {
     free(pkt_ack);
     free(pkt_fin);
     if (received_fin == 1 && received_fin_ack == 1) {
-      break;
+      if (start_time == NULL) {
+        start_time = clock();
+        end_time = clock();
+      } else {
+        end_time = clock();
+      }
+      if (end_time != NULL && start_time != NULL) {
+        if ((end_time - start_time) >= (TIMEOUT * 2)) {
+          break;
+        }
+      }
     }
   }
-  sleep(TIMEOUT * 2);
+
   if (sock != NULL) {
     if (sock->received_buf != NULL) {
       free(sock->received_buf);
