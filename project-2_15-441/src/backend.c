@@ -67,6 +67,7 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
       }
     }
     default: {
+      
       socklen_t conn_len = sizeof(sock->conn);
       uint32_t seq = sock->window.last_ack_received;
 
@@ -81,6 +82,9 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
       uint16_t src = sock->my_port;
       uint16_t dst = ntohs(sock->conn.sin_port);
       uint32_t ack = get_seq(hdr) + get_payload_len(pkt);
+      if(flags == (FIN_FLAG_MASK | ACK_FLAG_MASK)) {
+        ack = get_seq(hdr) + 1;
+      }
       uint16_t hlen = sizeof(cmu_tcp_header_t);
       uint16_t plen = hlen + payload_len;
       uint8_t flags = ACK_FLAG_MASK;
@@ -88,13 +92,11 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
       uint8_t *response_packet =
           create_packet(src, dst, seq, ack, hlen, plen, flags, adv_window,
                         ext_len, ext_data, payload, payload_len);
-
       sendto(sock->socket, response_packet, plen, 0,
              (struct sockaddr *)&(sock->conn), conn_len);
       free(response_packet);
 
       seq = get_seq(hdr);
-
       if (seq == sock->window.next_seq_expected) {
         sock->window.next_seq_expected = seq + get_payload_len(pkt);
         payload_len = get_payload_len(pkt);
@@ -106,26 +108,26 @@ void handle_message(cmu_socket_t *sock, uint8_t *pkt) {
         memcpy(sock->received_buf + sock->received_len, payload, payload_len);
         sock->received_len += payload_len;
       }
-      }
     }
   }
+}
 
 /**
- * 
+ *
  * Checks if the socket received any data
  *
  * It first peeks at the header to figure out the length of the packet and then
  * reads the entire packet.
- * 
+ *
  * @param sock The socket used for receiving data on the connection.
  * @param flags Flags that determine how the socket should wait for data. Check
  *             `cmu_read_mode_t` for more information.
- * 
+ *
  */
-uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
+uint8_t *check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
   cmu_tcp_header_t hdr;
   uint8_t *pkt = NULL;
-  
+
   socklen_t conn_len = sizeof(sock->conn);
   ssize_t len = 0;
   uint32_t plen = 0, buf_size = 0, n = 0;
@@ -163,7 +165,6 @@ uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
                    (struct sockaddr *)&(sock->conn), &conn_len);
       buf_size = buf_size + n;
     }
-      
   }
   return pkt;
 }
@@ -177,13 +178,12 @@ uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags) {
  *             `cmu_read_mode_t` for more information.
  */
 void check_for_data_wrapper(cmu_socket_t *sock, cmu_read_mode_t flags) {
-
   while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {
   }
 
   uint8_t *pkt = check_for_data(sock, flags);
-  if(pkt != NULL) {
-  handle_message(sock, pkt);
+  if (pkt != NULL) {
+    handle_message(sock, pkt);
   }
   free(pkt);
   pthread_mutex_unlock(&(sock->recv_lock));
@@ -228,7 +228,8 @@ void single_send(cmu_socket_t *sock, uint8_t *data, int buf_len) {
         // FIXME: This is using stop and wait, can we do better?
         sendto(sockfd, msg, plen, 0, (struct sockaddr *)&(sock->conn),
                conn_len);
-        // kvl: socket information of newly received packet will be received inside check_for_data_wrapper
+        // kvl: socket information of newly received packet will be received
+        // inside check_for_data_wrapper
         check_for_data_wrapper(sock, TIMEOUT);
         if (has_been_acked(sock, seq)) {
           break;
@@ -244,12 +245,12 @@ void *begin_backend(void *in) {
   int death, buf_len, send_signal;
   uint8_t *data;
   // loop until pthread exit
-  while (1) { 
+  while (1) {
     // locking death_lock, returns non-zero on error
     while (pthread_mutex_lock(&(sock->death_lock)) != 0) {
     }
     // set to dying on cmu_close
-    death = sock->dying; 
+    death = sock->dying;
     pthread_mutex_unlock(&(sock->death_lock));
 
     // locking send_lock, returns non-zero on error
@@ -270,14 +271,14 @@ void *begin_backend(void *in) {
       sock->sending_buf = NULL;
       // unlock send_lock
       pthread_mutex_unlock(&(sock->send_lock));
-      printf("single send\n");
       single_send(sock, data, buf_len);
       free(data);
     } else {
       pthread_mutex_unlock(&(sock->send_lock));
     }
     // regardless of (write) buf_len - check for data
-    // no wait is of type cmu_read_mode_t, Return immediately if no data is available
+    // no wait is of type cmu_read_mode_t, Return immediately if no data is
+    // available
     check_for_data_wrapper(sock, NO_WAIT);
 
     // locking recv_lock, returns non-zero on error
@@ -287,10 +288,11 @@ void *begin_backend(void *in) {
     send_signal = sock->received_len > 0;
 
     pthread_mutex_unlock(&(sock->recv_lock));
-
     if (send_signal) {
-    // Definition: The pthread_cond_signal() call unblocks at least one of the threads that are blocked on the specified condition variable cond (if any threads are blocked on cond).
-    // effectively tells cmu_read to finish up
+      // Definition: The pthread_cond_signal() call unblocks at least one of the
+      // threads that are blocked on the specified condition variable cond (if
+      // any threads are blocked on cond). effectively tells cmu_read to finish
+      // up
       pthread_cond_signal(&(sock->wait_cond));
     }
   }

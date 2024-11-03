@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "backend.h"
 #include "cmu_packet.h"
@@ -86,7 +86,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
         uint16_t src = my_addr.sin_port;
         uint16_t dst = ntohs(sock->conn.sin_port);
         struct timeval tv;
-        gettimeofday(&tv,NULL);
+        gettimeofday(&tv, NULL);
         srand(tv.tv_usec);
         uint32_t seq_syn_sent = rand();
         printf("CLIENT init seq %d\n", seq_syn_sent);
@@ -124,7 +124,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                 src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
                 ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
             printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
-            sendto(sock->socket, response_packet_ack, plen, 0,
+            sendto(sock->socket, response_packet_ack, hlen + 0, 0,
                    (struct sockaddr *)&(sock->conn), conn_len_ack);
             free(response_packet_ack);
             free(pkt_syn_ack);
@@ -151,7 +151,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       sock->conn = conn;
 
       while (1) {
-        
         uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
         cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
         uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
@@ -167,7 +166,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
             uint16_t src = my_addr.sin_port;
             uint16_t dst = ntohs(sock->conn.sin_port);
             struct timeval tv;
-            gettimeofday(&tv,NULL);
+            gettimeofday(&tv, NULL);
             srand(tv.tv_usec + 117);
             uint32_t seq_syn_ack_sent = rand();
             printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
@@ -217,6 +216,7 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   // on opening the socket the backend begins
   printf("beginning backend thread...\n");
   pthread_create(&(sock->thread_id), NULL, begin_backend, (void *)sock);
+
   return EXIT_SUCCESS;
 }
 
@@ -225,9 +225,68 @@ int cmu_close(cmu_socket_t *sock) {
   }
   sock->dying = 1;
   pthread_mutex_unlock(&(sock->death_lock));
-
   pthread_join(sock->thread_id, NULL);
 
+  int received_fin = 0;
+  int received_fin_ack = 0;
+  while (1) {
+    // Initiator handshake;
+    size_t conn_len = sizeof(sock->conn);
+    uint16_t payload_len = 0;
+    uint16_t src = sock->my_port;
+    uint16_t dst = ntohs(sock->conn.sin_port);
+    uint32_t seq_fin_sent = sock->window.last_ack_received;
+    uint32_t ack = sock->window.next_seq_expected;
+    uint16_t hlen = sizeof(cmu_tcp_header_t);
+    uint16_t plen = hlen + payload_len;
+    uint8_t flags = (FIN_FLAG_MASK | ACK_FLAG_MASK);
+    uint16_t adv_window = CP1_WINDOW_SIZE;
+    uint16_t ext_len = 0;
+    uint8_t *ext_data = NULL;
+    uint8_t *payload = NULL;
+    uint8_t *pkt_fin =
+        create_packet(src, dst, seq_fin_sent, ack, hlen, plen, flags,
+                      adv_window, ext_len, ext_data, payload, payload_len);
+    sendto(sock->socket, pkt_fin, plen, 0, (struct sockaddr *)&(sock->conn),
+           conn_len);
+
+    uint8_t *pkt_ack = check_for_data(sock, TIMEOUT);
+
+    cmu_tcp_header_t *hdr_ack_recv = (cmu_tcp_header_t *)pkt_ack;
+    flags = get_flags(hdr_ack_recv);
+    // received syn_ack;
+    uint32_t seq_syn_ack_recv = get_seq(hdr_ack_recv);
+    int ack_recv = get_ack(hdr_ack_recv);
+    int acked = (ack_recv == (seq_fin_sent + 1));
+    if (acked) {
+      sock->window.last_ack_received = ack_recv;
+      sock->window.next_seq_expected = seq_syn_ack_recv + 1;
+
+      if (flags == ACK_FLAG_MASK) {
+        received_fin_ack = 1;
+      }
+
+      if (flags == (FIN_FLAG_MASK | ACK_FLAG_MASK)) {
+        if (acked) {
+          uint8_t *pkt_fin_ack = create_packet(
+              src, dst, sock->window.last_ack_received,
+              sock->window.next_seq_expected, hlen, plen, ACK_FLAG_MASK,
+              adv_window, ext_len, ext_data, payload, payload_len);
+          sendto(sock->socket, pkt_fin_ack, plen, 0,
+                 (struct sockaddr *)&(sock->conn), conn_len);
+
+          received_fin = 1;
+        }
+      }
+    }
+
+    free(pkt_ack);
+    free(pkt_fin);
+    if (received_fin == 1 && received_fin_ack == 1) {
+      break;
+    }
+  }
+  sleep(TIMEOUT * 2);
   if (sock != NULL) {
     if (sock->received_buf != NULL) {
       free(sock->received_buf);
