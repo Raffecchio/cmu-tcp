@@ -23,13 +23,24 @@
 #include "cmu_packet.h"
 #include "grading.h"
 
+#include <sys/time.h>
+#include "buffer.h"
+
+
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
 #define EXIT_FAILURE 1
 
 typedef struct {
-  uint32_t next_seq_expected;
   uint32_t last_ack_received;
+  uint32_t send_win_cap;  // max # of bytes in the window
+  uint32_t send_win_len;  // # of bytes in window that are in-flight/received
+  time_t last_send;  // last send time for leftmost window byte in seconds
+
+  uint32_t next_seq_expected;
+  int recv_win_cap;  // a window containing received packets
+  int recv_win_len;  // a window containing received packets
+  buf_t recv_win_mask;  // a mask to keep track of which bytes were received
 } window_t;
 
 /**
@@ -45,21 +56,30 @@ typedef enum {
  * you see fit to include any additional state you need for your implementation.
  */
 typedef struct {
+  cmu_socket_type_t type;
+  int dying;
+
+  /* sending data */
+  buf_t sending_buf;
+
+  /* receiving data */
+  buf_t received_buf;
+
+  /* windowing info */
+  window_t window;
+
+  /* concurrency */
+  pthread_mutex_t send_lock;
+  pthread_mutex_t recv_lock;
+  pthread_mutex_t death_lock;
+  pthread_cond_t wait_cond;
+
+  /* underlying network info */
   int socket;
   pthread_t thread_id;
   uint16_t my_port;
   struct sockaddr_in conn;
-  uint8_t* received_buf;
-  int received_len;
-  pthread_mutex_t recv_lock;
-  pthread_cond_t wait_cond;
-  uint8_t* sending_buf;
-  int sending_len;
-  cmu_socket_type_t type;
-  pthread_mutex_t send_lock;
-  int dying;
-  pthread_mutex_t death_lock;
-  window_t window;
+  
 } cmu_socket_t;
 
 /*
