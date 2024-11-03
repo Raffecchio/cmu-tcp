@@ -234,6 +234,7 @@ int cmu_close(cmu_socket_t *sock) {
   clock_t end_time = NULL;
   while (1) {
     // Initiator handshake;
+
     size_t conn_len = sizeof(sock->conn);
     uint16_t payload_len = 0;
     uint16_t src = sock->my_port;
@@ -247,53 +248,62 @@ int cmu_close(cmu_socket_t *sock) {
     uint16_t ext_len = 0;
     uint8_t *ext_data = NULL;
     uint8_t *payload = NULL;
+
+    // if (received_fin_ack == 0) {
     uint8_t *pkt_fin =
         create_packet(src, dst, seq_fin_sent, ack, hlen, plen, flags,
                       adv_window, ext_len, ext_data, payload, payload_len);
     sendto(sock->socket, pkt_fin, plen, 0, (struct sockaddr *)&(sock->conn),
            conn_len);
-
+    free(pkt_fin);
+    // }
     uint8_t *pkt_ack = check_for_data(sock, TIMEOUT);
+    if (pkt_ack != NULL) {
+      cmu_tcp_header_t *hdr_ack_recv = (cmu_tcp_header_t *)pkt_ack;
+      flags = get_flags(hdr_ack_recv);
+      // received syn_ack;
+      uint32_t seq_syn_ack_recv = get_seq(hdr_ack_recv);
+      int ack_recv = get_ack(hdr_ack_recv);
+      int acked = (ack_recv == (seq_fin_sent + 1));
+      if (acked) {
+        sock->window.last_ack_received = ack_recv;
+        sock->window.next_seq_expected = seq_syn_ack_recv + 1;
 
-    cmu_tcp_header_t *hdr_ack_recv = (cmu_tcp_header_t *)pkt_ack;
-    flags = get_flags(hdr_ack_recv);
-    // received syn_ack;
-    uint32_t seq_syn_ack_recv = get_seq(hdr_ack_recv);
-    int ack_recv = get_ack(hdr_ack_recv);
-    int acked = (ack_recv == (seq_fin_sent + 1));
-    if (acked) {
-      sock->window.last_ack_received = ack_recv;
-      sock->window.next_seq_expected = seq_syn_ack_recv + 1;
+        if (flags == ACK_FLAG_MASK) {
+          received_fin_ack = 1;
+        }
 
-      if (flags == ACK_FLAG_MASK) {
-        received_fin_ack = 1;
-      }
+        if (flags == (FIN_FLAG_MASK | ACK_FLAG_MASK)) {
+          if (acked) {
+            uint8_t *pkt_fin_ack = create_packet(
+                src, dst, sock->window.last_ack_received,
+                sock->window.next_seq_expected, hlen, plen, ACK_FLAG_MASK,
+                adv_window, ext_len, ext_data, payload, payload_len);
+            sendto(sock->socket, pkt_fin_ack, plen, 0,
+                   (struct sockaddr *)&(sock->conn), conn_len);
 
-      if (flags == (FIN_FLAG_MASK | ACK_FLAG_MASK)) {
-        if (acked) {
-          uint8_t *pkt_fin_ack = create_packet(
-              src, dst, sock->window.last_ack_received,
-              sock->window.next_seq_expected, hlen, plen, ACK_FLAG_MASK,
-              adv_window, ext_len, ext_data, payload, payload_len);
-          sendto(sock->socket, pkt_fin_ack, plen, 0,
-                 (struct sockaddr *)&(sock->conn), conn_len);
-
-          received_fin = 1;
+            received_fin = 1;
+          }
         }
       }
-    }
 
-    free(pkt_ack);
-    free(pkt_fin);
+      free(pkt_ack);
+    }
     if (received_fin == 1 && received_fin_ack == 1) {
+      double time_diff = 0;
       if (start_time == NULL) {
         start_time = clock();
         end_time = clock();
       } else {
+        time_diff = (double)end_time - start_time;
         end_time = clock();
       }
       if (end_time != NULL && start_time != NULL) {
-        if ((end_time - start_time) >= (TIMEOUT * 2)) {
+        double max_timeout = (double)DEFAULT_TIMEOUT;
+        printf("time_diff %f\n", time_diff);
+        printf("max_timeout %f\n", max_timeout);
+        if (time_diff >= max_timeout) {
+          printf("ending\n");
           break;
         }
       }
