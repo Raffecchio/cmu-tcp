@@ -35,8 +35,11 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len) {
 
 
 int buf_pop(buf_t *buf, uint8_t **data, uint32_t len) {
-  if(len == 0)
+  if(len == 0) {
+    if(data != NULL)
+      *data = NULL;
     return 0;
+  }
 
   if(buf->len <= len) {
     if(data != NULL)
@@ -61,12 +64,26 @@ int buf_pop(buf_t *buf, uint8_t **data, uint32_t len) {
 }
 
 
-uint8_t buf_get(const buf_t *buf, int i) {
+uint8_t buf_get(const buf_t *buf, uint32_t i) {
+  if(i >= buf->len) {
+    perror("Error: Attempted out-of-bounds access to buffer in buf_get");
+    return -1;
+  }
   return buf->data[i];
 }
 
 
-static int ensure_len(buf_t *buf, uint32_t len) {
+int buf_set(buf_t *buf, uint32_t i, uint8_t val) {
+  if(i >= buf->len) {
+    perror("Error: Attempted out-of-bounds access to buffer in buf_set");
+    return -1;
+  }
+  buf->data[i] = val;
+  return 0;
+}
+
+
+int buf_ensure_len(buf_t *buf, uint32_t len) {
   if(len < buf->len)
     return 0; 
   if(buf->data == NULL) {
@@ -78,7 +95,21 @@ static int ensure_len(buf_t *buf, uint32_t len) {
 }
 
 
-int buf_set(buf_t *buf, uint32_t i, const uint8_t *data, uint32_t len) {
+int buf_append(buf_t *buf, const uint8_t *data, uint32_t len) {
+  if(len == 0)
+    return 0;
+  if(data == NULL) {
+    perror("Error: Invalid data ptr in buf_append");
+    return -1;
+  }
+  
+  buf_ensure_len(buf, buf->len + len);
+  memcpy(buf->data + buf->len - len, data, len);
+  return len;
+}
+
+
+int buf_set_data(buf_t *buf, uint32_t i, const uint8_t *data, uint32_t len) {
   if(len == 0)
     return 0;
 
@@ -88,7 +119,7 @@ int buf_set(buf_t *buf, uint32_t i, const uint8_t *data, uint32_t len) {
     return -1;
   }
   
-  ensure_len(buf, i + len);
+  buf_ensure_len(buf, i + len);
   memcpy(buf->data + i, data, len);
   return len;
 }

@@ -19,33 +19,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint16_t get_src(cmu_tcp_header_t* header) {
+uint16_t get_src(const cmu_tcp_header_t* header) {
   return ntohs(header->source_port);
 }
 
-uint16_t get_dst(cmu_tcp_header_t* header) {
+uint16_t get_dst(const cmu_tcp_header_t* header) {
   return ntohs(header->destination_port);
 }
 
-uint32_t get_seq(cmu_tcp_header_t* header) { return ntohl(header->seq_num); }
+uint32_t get_seq(const cmu_tcp_header_t* header) { return ntohl(header->seq_num); }
 
-uint32_t get_ack(cmu_tcp_header_t* header) { return ntohl(header->ack_num); }
+uint32_t get_ack(const cmu_tcp_header_t* header) { return ntohl(header->ack_num); }
 
-uint16_t get_hlen(cmu_tcp_header_t* header) { return ntohs(header->hlen); }
+uint16_t get_hlen(const cmu_tcp_header_t* header) { return ntohs(header->hlen); }
 
-uint16_t get_plen(cmu_tcp_header_t* header) { return ntohs(header->plen); }
+uint16_t get_plen(const cmu_tcp_header_t* header) { return ntohs(header->plen); }
 
-uint8_t get_flags(cmu_tcp_header_t* header) { return header->flags; }
+uint8_t get_flags(const cmu_tcp_header_t* header) { return header->flags; }
 
-uint16_t get_advertised_window(cmu_tcp_header_t* header) {
+uint16_t get_advertised_window(const cmu_tcp_header_t* header) {
   return ntohs(header->advertised_window);
 }
 
-uint16_t get_extension_length(cmu_tcp_header_t* header) {
+uint16_t get_extension_length(const cmu_tcp_header_t* header) {
   return ntohs(header->extension_length);
 }
 
-uint8_t* get_extension_data(cmu_tcp_header_t* header) {
+uint8_t* get_extension_data(const cmu_tcp_header_t* header) {
   return (uint8_t*)(header + 1);
 }
 

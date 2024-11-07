@@ -43,16 +43,16 @@ typedef struct {
 
 /* Helper functions to get/set fields in the header */
 
-uint16_t get_src(cmu_tcp_header_t* header);
-uint16_t get_dst(cmu_tcp_header_t* header);
-uint32_t get_seq(cmu_tcp_header_t* header);
-uint32_t get_ack(cmu_tcp_header_t* header);
-uint16_t get_hlen(cmu_tcp_header_t* header);
-uint16_t get_plen(cmu_tcp_header_t* header);
-uint8_t get_flags(cmu_tcp_header_t* header);
-uint16_t get_advertised_window(cmu_tcp_header_t* header);
-uint16_t get_extension_length(cmu_tcp_header_t* header);
-uint8_t* get_extension_data(cmu_tcp_header_t* header);
+uint16_t get_src(const cmu_tcp_header_t* header);
+uint16_t get_dst(const cmu_tcp_header_t* header);
+uint32_t get_seq(const cmu_tcp_header_t* header);
+uint32_t get_ack(const cmu_tcp_header_t* header);
+uint16_t get_hlen(const cmu_tcp_header_t* header);
+uint16_t get_plen(const cmu_tcp_header_t* header);
+uint8_t get_flags(const cmu_tcp_header_t* header);
+uint16_t get_advertised_window(const cmu_tcp_header_t* header);
+uint16_t get_extension_length(const cmu_tcp_header_t* header);
+uint8_t* get_extension_data(const cmu_tcp_header_t* header);
 
 void set_src(cmu_tcp_header_t* header, uint16_t src);
 void set_dst(cmu_tcp_header_t* header, uint16_t dst);

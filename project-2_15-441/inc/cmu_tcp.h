@@ -31,17 +31,44 @@
 #define EXIT_ERROR -1
 #define EXIT_FAILURE 1
 
+
+#define CHK(__va_args__)\
+{\
+  if(!(__va_args__))\
+    return EXIT_FAILURE; \
+}
+
+#define CHK_MSG(MSG, __va_args__)\
+{\
+  if(!(__va_args__)) {\
+    perror(MSG);\
+    return EXIT_FAILURE; \
+  }\
+}
+
+
+/**
+ * Information necessary for windowing in both sending and receiving.
+ *
+ * A window here is defined as a contiguous portion at the start or end of
+ * the containing socket's sending buffer or receiving buffer, respectively.
+ * The size buffer!
+ */
 typedef struct {
   uint32_t last_ack_received;
+  uint32_t num_inflight;
   uint32_t send_win_cap;  // max # of bytes in the window
-  uint32_t send_win_len;  // # of bytes in window that are in-flight/received
+  buf_t send_win;
   time_t last_send;  // last send time for leftmost window byte in seconds
 
   uint32_t next_seq_expected;
-  int recv_win_cap;  // a window containing received packets
-  int recv_win_len;  // a window containing received packets
-  buf_t recv_win_mask;  // a mask to keep track of which bytes were received
+  // uint32_t recv_win_cap;  // a window containing received packets
+  buf_t recv_win;  // a buffer temporarily holding received data
+  buf_t recv_mask;  // a mask to keep track of which bytes in the
+                        // receive windowwere received
 } window_t;
+
+// int init_window(window_t *window);
 
 /**
  * CMU-TCP socket types. (DO NOT CHANGE.)
@@ -153,5 +180,7 @@ int cmu_write(cmu_socket_t* sock, const void* buf, int length);
 /*
  * You can declare more functions after this point if you need to.
  */
+int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
+    const int port, const char *server_ip);
 
 #endif  // PROJECT_2_15_441_INC_CMU_TCP_H_

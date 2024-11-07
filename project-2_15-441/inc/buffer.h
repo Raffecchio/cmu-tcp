@@ -40,7 +40,15 @@ uint8_t buf_get(const buf_t *buf, int i);
  *
  * The buffer will be resized as needed if i + len > buf->len.
  */
-int buf_set(buf_t *buf, uint32_t i, const uint8_t *data, uint32_t len);
+// int buf_set_data(buf_t *buf, uint32_t i, const uint8_t *data, uint32_t len);
+
+
+int buf_append(buf_t *buf, const uint8_t *data, uint32_t len);
+
+
+int buf_set(buf_t *buf, uint32_t i, uint8_t val);
+
+int buf_ensure_len(buf_t *buf, uint32_t len);
 
 /**
  * Initializes a buffer
