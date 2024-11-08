@@ -31,7 +31,7 @@ int buf_pop(buf_t *buf, uint8_t **data, uint32_t len);
  *
  * Undefined behavior if not 0 <= i < buf->len
  */
-uint8_t buf_get(const buf_t *buf, int i);
+uint8_t buf_get(const buf_t *buf, uint32_t i);
 
 
 /**

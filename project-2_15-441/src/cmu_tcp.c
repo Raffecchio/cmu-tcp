@@ -121,7 +121,7 @@ static int active_connect(cmu_socket_t *sock) {
     sendto(sock->socket, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
            conn_len);
 
-    uint8_t *pkt_syn_ack = check_for_data(sock, TIMEOUT);
+    uint8_t *pkt_syn_ack = chk_recv_pkt(sock, TIMEOUT);
     cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
     flags = get_flags(hdr_syn_ack_recv);
     // received syn_ack;
@@ -155,10 +155,10 @@ static int active_connect(cmu_socket_t *sock) {
 }
 
 
-static int passive_conect(cmu_socket_t *sock) {
+static int passive_connect(cmu_socket_t *sock) {
   while (1) {
     
-    uint8_t *pkt_syn_recv = check_for_data(sock, TIMEOUT);
+    uint8_t *pkt_syn_recv = chk_recv_pkt(sock, TIMEOUT);
     cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
     uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
     printf("SERVER orig seq from client %d\n", seq_syn_recv);
@@ -191,7 +191,7 @@ static int passive_conect(cmu_socket_t *sock) {
         sendto(sock->socket, pkt_syn_ack_send, plen, 0,
                (struct sockaddr *)&(sock->conn), conn_len);
         free(pkt_syn_ack_send);
-        uint8_t *pkt_ack_recv = check_for_data(sock, TIMEOUT);
+        uint8_t *pkt_ack_recv = chk_recv_pkt(sock, TIMEOUT);
         if (pkt_ack_recv != NULL) {
           cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
 

@@ -29,7 +29,7 @@
  */
 void* begin_backend(void* in);
 
-uint8_t * check_for_data(cmu_socket_t *sock, cmu_read_mode_t flags);
+uint8_t * chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags);
 int has_been_acked(cmu_socket_t *sock, uint32_t seq);
 void send_ack(cmu_socket_t *sock, uint8_t *pkt);
 #endif  // PROJECT_2_15_441_INC_BACKEND_H_
