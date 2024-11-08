@@ -6,11 +6,11 @@ CC=gcc
 FLAGS = -pthread -fPIC -g -ggdb -pedantic -Wall -Wextra -DDEBUG -I$(INC_DIR)
 OBJS = $(BUILD_DIR)/cmu_packet.o $(BUILD_DIR)/cmu_tcp.o $(BUILD_DIR)/backend.o $(BUILD_DIR)/buffer.o
 
-TEST_SRC_DIR = $(TOP_DIR)/src_test
+TEST_SRC_DIR = $(TOP_DIR)/tests
 TEST_BUILD_DIR = $(TOP_DIR)/build_test
-TESTS = test_buffer
+TESTS = tests/test_buffer
 
-all: server client tests/testing_server tests
+all: server client tests/testing_server tests testing
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(FLAGS) -c -o $@ $<
@@ -25,8 +25,8 @@ tests/testing_server: $(OBJS)
 	$(CC) $(FLAGS) tests/testing_server.c -o tests/testing_server $(OBJS)
 
 
-test_%: $(OBJS)
-	$(CC) $(FLAGS) $(TEST_SRC_DIR)/$@.c -o $(TEST_BUILD_DIR)/$@ $(OBJS)
+tests/test_%: $(TEST_SRC_DIR)/test_%.c $(OBJS) 
+	$(CC) $(FLAGS) -o $@ $< $(OBJS)
 testing: $(TESTS)
 
 
