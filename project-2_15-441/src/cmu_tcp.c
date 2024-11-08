@@ -118,37 +118,38 @@ static int active_connect(cmu_socket_t *sock) {
     uint8_t *pkt_syn =
         create_packet(src, dst, seq_syn_sent, ack, hlen, plen, flags,
                       adv_window, ext_len, ext_data, payload, payload_len);
-    sendto(sock->socket, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
-           conn_len);
+    CHK_MSG("Error in sending SYN",
+        sendto(sock->socket, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
+           conn_len))
 
     uint8_t *pkt_syn_ack = chk_recv_pkt(sock, TIMEOUT);
     cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
     flags = get_flags(hdr_syn_ack_recv);
     // received syn_ack;
-    if (flags == (SYN_FLAG_MASK | ACK_FLAG_MASK)) {
-      int syn_ack_acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
-      if (syn_ack_acked) {
-        sock->window.last_ack_received = get_ack(hdr_syn_ack_recv);
-        uint32_t seq_syn_ack_recv = get_seq(hdr_syn_ack_recv);
-        sock->window.next_seq_expected = seq_syn_ack_recv + 1;
-        printf("CLIENT Ack: sock->window.last_ack_received %d\n",
-               sock->window.last_ack_received);
-        printf("CLIENT: sock->window.next_seq_expected %d\n",
-               sock->window.next_seq_expected);
-        socklen_t conn_len_ack = sizeof(sock->conn);
+    if (flags != (SYN_FLAG_MASK | ACK_FLAG_MASK))
+      continue;
+    int syn_ack_acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
+    if (!syn_ack_acked)
+      continue;
+    sock->window.last_ack_received = get_ack(hdr_syn_ack_recv);
+    uint32_t seq_syn_ack_recv = get_seq(hdr_syn_ack_recv);
+    sock->window.next_seq_expected = seq_syn_ack_recv + 1;
+    printf("CLIENT Ack: sock->window.last_ack_received %d\n",
+        sock->window.last_ack_received);
+    printf("CLIENT: sock->window.next_seq_expected %d\n",
+        sock->window.next_seq_expected);
+    socklen_t conn_len_ack = sizeof(sock->conn);
 
-        uint8_t *response_packet_ack = create_packet(
-            src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
-            ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
-        printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
-        sendto(sock->socket, response_packet_ack, plen, 0,
-               (struct sockaddr *)&(sock->conn), conn_len_ack);
-        free(response_packet_ack);
-        free(pkt_syn_ack);
-        free(pkt_syn);
-        return 0;
-      }
-    }
+    uint8_t *response_packet_ack = create_packet(
+        src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
+        ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
+    printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
+    sendto(sock->socket, response_packet_ack, plen, 0,
+        (struct sockaddr *)&(sock->conn), conn_len_ack);
+    free(response_packet_ack);
+    free(pkt_syn_ack);
+    free(pkt_syn);
+    return 0;
     free(pkt_syn_ack);
   }
   return -1;
@@ -159,6 +160,8 @@ static int passive_connect(cmu_socket_t *sock) {
   while (1) {
     
     uint8_t *pkt_syn_recv = chk_recv_pkt(sock, TIMEOUT);
+    if(pkt_syn_recv == NULL)
+      continue;
     cmu_tcp_header_t *hdr_syn_recv = (cmu_tcp_header_t *)pkt_syn_recv;
     uint32_t seq_syn_recv = get_seq(hdr_syn_recv);
     printf("SERVER orig seq from client %d\n", seq_syn_recv);
@@ -192,21 +195,21 @@ static int passive_connect(cmu_socket_t *sock) {
                (struct sockaddr *)&(sock->conn), conn_len);
         free(pkt_syn_ack_send);
         uint8_t *pkt_ack_recv = chk_recv_pkt(sock, TIMEOUT);
-        if (pkt_ack_recv != NULL) {
-          cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
+        if(pkt_ack_recv == NULL)
+          continue;
+        cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
 
-          int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
+        int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
 
-          if (get_flags(hdr_two) == ACK_FLAG_MASK) {
-            if (syn_ack_acked && get_plen(hdr_two) == hlen) {
-              sock->window.last_ack_received = get_ack(hdr_two);
-              sock->window.next_seq_expected = get_seq(hdr_two) + 1;
-              free(pkt_ack_recv);
-              return 0;
-            }
-          } else {
+        if (get_flags(hdr_two) == ACK_FLAG_MASK) {
+          if (syn_ack_acked && get_plen(hdr_two) == hlen) {
+            sock->window.last_ack_received = get_ack(hdr_two);
+            sock->window.next_seq_expected = get_seq(hdr_two) + 1;
             free(pkt_ack_recv);
+            return 0;
           }
+        } else {
+          free(pkt_ack_recv);
         }
       }
       break;
@@ -304,3 +307,4 @@ int cmu_write(cmu_socket_t *sock, const void *buf, int length) {
 
   return EXIT_SUCCESS;
 }
+

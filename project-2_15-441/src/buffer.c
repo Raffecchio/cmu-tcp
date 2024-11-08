@@ -86,11 +86,13 @@ int buf_set(buf_t *buf, uint32_t i, uint8_t val) {
 int buf_ensure_len(buf_t *buf, uint32_t len) {
   if(len < buf->len)
     return 0; 
-  if(buf->data == NULL) {
+  if(buf->data == NULL)
     buf->data = malloc(len);
-  } else if(buf->len) {
+  else if(buf->len)
     buf->data = realloc(buf->data, len);
-  }
+  else
+    return -1;
+  buf->len = len;
   return 0;
 }
 
