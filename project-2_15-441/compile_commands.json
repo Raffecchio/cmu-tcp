@@ -2,27 +2,6 @@
   {
     "arguments": [
       "/usr/bin/gcc",
-      "-pthread",
-      "-fPIC",
-      "-g",
-      "-ggdb",
-      "-pedantic",
-      "-Wall",
-      "-Wextra",
-      "-DDEBUG",
-      "-I./inc",
-      "-c",
-      "-o",
-      "build/buffer.o",
-      "src/buffer.c"
-    ],
-    "directory": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441",
-    "file": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/src/buffer.c",
-    "output": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/build/buffer.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
       "-c",
       "-pthread",
       "-fPIC",
@@ -38,61 +17,11 @@
       "./build/backend.o",
       "./build/buffer.o",
       "-o",
-      "server",
-      "./src/server.c"
+      "./build_test/test_buffer",
+      "./src_test/test_buffer.c"
     ],
     "directory": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441",
-    "file": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/src/server.c",
-    "output": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/server"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-pthread",
-      "-fPIC",
-      "-g",
-      "-ggdb",
-      "-pedantic",
-      "-Wall",
-      "-Wextra",
-      "-DDEBUG",
-      "-I./inc",
-      "./build/cmu_packet.o",
-      "./build/cmu_tcp.o",
-      "./build/backend.o",
-      "./build/buffer.o",
-      "-o",
-      "client",
-      "./src/client.c"
-    ],
-    "directory": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441",
-    "file": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/src/client.c",
-    "output": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/client"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-pthread",
-      "-fPIC",
-      "-g",
-      "-ggdb",
-      "-pedantic",
-      "-Wall",
-      "-Wextra",
-      "-DDEBUG",
-      "-I./inc",
-      "./build/cmu_packet.o",
-      "./build/cmu_tcp.o",
-      "./build/backend.o",
-      "./build/buffer.o",
-      "-o",
-      "tests/testing_server",
-      "tests/testing_server.c"
-    ],
-    "directory": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441",
-    "file": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/tests/testing_server.c",
-    "output": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/tests/testing_server"
+    "file": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/src_test/test_buffer.c",
+    "output": "/home/danecchio/networks_f24/cmu-tcp/project-2_15-441/build_test/test_buffer"
   }
 ]
