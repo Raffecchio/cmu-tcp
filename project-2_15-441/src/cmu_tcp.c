@@ -230,8 +230,8 @@ int cmu_close(cmu_socket_t *sock) {
 
   int received_fin = 0;
   int received_fin_ack = 0;
-  clock_t start_time = NULL;
-  clock_t end_time = NULL;
+  clock_t start_time = 0;
+  clock_t end_time = 0;
   while (1) {
     // Initiator handshake;
 
@@ -263,8 +263,8 @@ int cmu_close(cmu_socket_t *sock) {
       flags = get_flags(hdr_ack_recv);
       // received syn_ack;
       uint32_t seq_syn_ack_recv = get_seq(hdr_ack_recv);
-      int ack_recv = get_ack(hdr_ack_recv);
-      int acked = (ack_recv == (seq_fin_sent + 1));
+      uint32_t ack_recv = get_ack(hdr_ack_recv);
+      uint32_t acked = (ack_recv == (seq_fin_sent + 1));
       if (acked) {
         sock->window.last_ack_received = ack_recv;
         sock->window.next_seq_expected = seq_syn_ack_recv + 1;
@@ -291,14 +291,14 @@ int cmu_close(cmu_socket_t *sock) {
     }
     if (received_fin == 1 && received_fin_ack == 1) {
       double time_diff = 0;
-      if (start_time == NULL) {
+      if (start_time == 0) {
         start_time = clock();
         end_time = clock();
       } else {
         time_diff = (double)end_time - start_time;
         end_time = clock();
       }
-      if (end_time != NULL && start_time != NULL) {
+      if (end_time != 0 && start_time != 0) {
         double max_timeout = (double)DEFAULT_TIMEOUT;
         printf("time_diff %f\n", time_diff);
         printf("max_timeout %f\n", max_timeout);
