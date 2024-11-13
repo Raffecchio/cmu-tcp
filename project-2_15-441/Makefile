@@ -4,11 +4,13 @@ SRC_DIR = $(TOP_DIR)/src
 BUILD_DIR = $(TOP_DIR)/build
 CC=gcc
 FLAGS = -pthread -fPIC -g -ggdb -pedantic -Wall -Wextra -DDEBUG -I$(INC_DIR)
-OBJS = $(BUILD_DIR)/cmu_packet.o $(BUILD_DIR)/cmu_tcp.o $(BUILD_DIR)/backend.o $(BUILD_DIR)/buffer.o
+OBJS = $(BUILD_DIR)/cmu_packet.o $(BUILD_DIR)/cmu_tcp.o $(BUILD_DIR)/backend.o $(BUILD_DIR)/buffer.o $(BUILD_DIR)/recv.o $(BUILD_DIR)/send.o
 
+# --- ADDED FOR TESTING ----
 TEST_SRC_DIR = $(TOP_DIR)/tests
 TEST_BUILD_DIR = $(TOP_DIR)/build_test
 TESTS = tests/test_buffer
+# --- END ADDED FOR TESTING ----
 
 all: server client tests/testing_server tests testing
 
