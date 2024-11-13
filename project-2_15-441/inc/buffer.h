@@ -24,7 +24,7 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len);
  * anything in data. If no data is read (return value is 0), then *data is set
  * as NULL.
  */
-int buf_pop(buf_t *buf, uint8_t **data, uint32_t len);
+uint32_t buf_pop(buf_t *buf, uint8_t **data, uint32_t len);
 
 /**
  * Retrieves byte at a specific index.
