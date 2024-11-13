@@ -50,13 +50,17 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
   /* windowing */
   buf_init(&(sock->window.send_win));
-  sock->window.send_win_cap = 0;
+  sock->window.adv_win = 0;
   sock->window.last_send = -1;
   sock->window.last_ack_received = 0;
   sock->window.num_inflight = 0;
   buf_init(&(sock->window.recv_win));
+  buf_ensure_len(&(sock->window.recv_win), MAX_NETWORK_BUFFER);
   sock->window.next_seq_expected = 0;
   buf_init(&(sock->window.recv_mask));
+  buf_ensure_len(&(sock->window.recv_mask), MAX_NETWORK_BUFFER);
+  for(uint32_t i = 0; i < MAX_NETWORK_BUFFER; i++)
+    buf_set(&(sock->window.recv_mask), i, 0);
 
   /* underlying network */
   sock->socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -100,6 +104,7 @@ static int active_connect(cmu_socket_t *sock) {
     // Initiator handshake;
     size_t conn_len = sizeof(sock->conn);
     uint16_t payload_len = 0;
+    /* send SYN */
     uint16_t src = sock->my_port;
     uint16_t dst = ntohs(sock->conn.sin_port);
     struct timeval tv;
@@ -122,6 +127,7 @@ static int active_connect(cmu_socket_t *sock) {
         sendto(sock->socket, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
            conn_len))
 
+    /* receive SYN_ACK */
     uint8_t *pkt_syn_ack = chk_recv_pkt(sock, TIMEOUT);
     cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
     flags = get_flags(hdr_syn_ack_recv);
@@ -140,12 +146,19 @@ static int active_connect(cmu_socket_t *sock) {
         sock->window.next_seq_expected);
     socklen_t conn_len_ack = sizeof(sock->conn);
 
+    /* resize the window */
+    uint32_t adv_win = get_advertised_window(hdr_syn_ack_recv);
+    sock->window.adv_win = adv_win;
+
+    /* send ACK */
     uint8_t *response_packet_ack = create_packet(
         src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
         ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
     printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
     sendto(sock->socket, response_packet_ack, plen, 0,
         (struct sockaddr *)&(sock->conn), conn_len_ack);
+
+    /* cleanup */
     free(response_packet_ack);
     free(pkt_syn_ack);
     free(pkt_syn);
@@ -168,52 +181,52 @@ static int passive_connect(cmu_socket_t *sock) {
     uint8_t flags = get_flags(hdr_syn_recv);
     free(pkt_syn_recv);
 
-    if (flags == SYN_FLAG_MASK) {
-      while (1) {
-        // SYN_ACKING - SYN_FLAG_MASK
-        size_t conn_len = sizeof(sock->conn);
-        uint16_t payload_len = 0;
-        uint16_t src = sock->my_port;
-        uint16_t dst = ntohs(sock->conn.sin_port);
-        struct timeval tv;
-        gettimeofday(&tv,NULL);
-        srand(tv.tv_usec + 117);
-        uint32_t seq_syn_ack_sent = rand();
-        printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
-        uint32_t ack = seq_syn_recv + 1;
-        uint16_t hlen = sizeof(cmu_tcp_header_t);
-        uint16_t plen = hlen + payload_len;
-        uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
-        uint16_t adv_window = CP1_WINDOW_SIZE;
-        uint16_t ext_len = 0;
-        uint8_t *ext_data = NULL;
-        uint8_t *payload = NULL;
-        uint8_t *pkt_syn_ack_send = create_packet(
-            src, dst, seq_syn_ack_sent, ack, hlen, plen, flags, adv_window,
-            ext_len, ext_data, payload, payload_len);
-        sendto(sock->socket, pkt_syn_ack_send, plen, 0,
-               (struct sockaddr *)&(sock->conn), conn_len);
-        free(pkt_syn_ack_send);
-        uint8_t *pkt_ack_recv = chk_recv_pkt(sock, TIMEOUT);
-        if(pkt_ack_recv == NULL)
-          continue;
-        cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
-
-        int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
-
-        if (get_flags(hdr_two) == ACK_FLAG_MASK) {
-          if (syn_ack_acked && get_plen(hdr_two) == hlen) {
-            sock->window.last_ack_received = get_ack(hdr_two);
-            sock->window.next_seq_expected = get_seq(hdr_two) + 1;
-            free(pkt_ack_recv);
-            return 0;
-          }
-        } else {
-          free(pkt_ack_recv);
-        }
+    if (flags != SYN_FLAG_MASK)
+      continue;
+    while (1) {
+      // SYN_ACKING - SYN_FLAG_MASK
+      size_t conn_len = sizeof(sock->conn);
+      uint16_t payload_len = 0;
+      uint16_t src = sock->my_port;
+      uint16_t dst = ntohs(sock->conn.sin_port);
+      struct timeval tv;
+      gettimeofday(&tv,NULL);
+      srand(tv.tv_usec + 117);
+      uint32_t seq_syn_ack_sent = rand();
+      printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
+      uint32_t ack = seq_syn_recv + 1;
+      uint16_t hlen = sizeof(cmu_tcp_header_t);
+      uint16_t plen = hlen + payload_len;
+      uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
+      uint16_t adv_window = CP1_WINDOW_SIZE;
+      uint16_t ext_len = 0;
+      uint8_t *ext_data = NULL;
+      uint8_t *payload = NULL;
+      uint8_t *pkt_syn_ack_send = create_packet(
+          src, dst, seq_syn_ack_sent, ack, hlen, plen, flags, adv_window,
+          ext_len, ext_data, payload, payload_len);
+      sendto(sock->socket, pkt_syn_ack_send, plen, 0,
+             (struct sockaddr *)&(sock->conn), conn_len);
+      free(pkt_syn_ack_send);
+      uint8_t *pkt_ack_recv = chk_recv_pkt(sock, TIMEOUT);
+      if(pkt_ack_recv == NULL)
+        continue;
+      cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
+      int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
+      if ((get_flags(hdr_two) != ACK_FLAG_MASK)
+          || !syn_ack_acked
+          || (get_plen(hdr_two) != hlen)) {
+        free(pkt_ack_recv);
+        continue;
       }
-      break;
+
+      sock->window.last_ack_received = get_ack(hdr_two);
+      sock->window.next_seq_expected = get_seq(hdr_two) + 1;
+      sock->window.adv_win = get_advertised_window(hdr_two);
+      free(pkt_ack_recv);
+      return 0;
     }
+    break;
   }
   return -1;
 }
@@ -282,7 +295,6 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
       while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
       CHK(read_len = buf_pop(&(sock->received_buf), (uint8_t**)&buf, length));
       pthread_mutex_unlock(&(sock->recv_lock));
-
       break;
     default:
       perror("ERROR Unknown flag.\n");
