@@ -56,10 +56,12 @@
  */
 typedef struct {
   uint32_t last_ack_received;
-  uint32_t num_inflight;
+  uint32_t num_inflight;  // current # of unacknowledged bytes sent
   uint32_t adv_win;  // max # of bytes in the window
   buf_t send_win;
   time_t last_send;  // last send time for leftmost window byte in seconds
+  uint32_t dup_ack_cnt;  // duplicate ACK count (only standalone ACKS should
+                         // add to this)
 
   uint32_t next_seq_expected;
   buf_t recv_win;  // a buffer temporarily holding received data

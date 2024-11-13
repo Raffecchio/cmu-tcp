@@ -114,7 +114,7 @@ uint8_t* get_payload(uint8_t* pkt) {
   return (uint8_t*)header + offset;
 }
 
-uint16_t get_payload_len(uint8_t* pkt) {
+uint16_t get_payload_len(const uint8_t* pkt) {
   cmu_tcp_header_t* header = (cmu_tcp_header_t*)pkt;
   return get_plen(header) - get_hlen(header);
 }

@@ -54,6 +54,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->window.last_send = -1;
   sock->window.last_ack_received = 0;
   sock->window.num_inflight = 0;
+  sock->window.dup_ack_cnt = 0;
   buf_init(&(sock->window.recv_win));
   buf_ensure_len(&(sock->window.recv_win), MAX_NETWORK_BUFFER);
   sock->window.next_seq_expected = 0;

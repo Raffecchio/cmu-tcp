@@ -66,7 +66,8 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   struct timeval now;
   gettimeofday(&now, NULL);
   double elapsed_ms = (sock->window.last_send - now.tv_sec)*1000.0;
-  if((sock->window.last_send < 0) || (elapsed_ms >= DEFAULT_TIMEOUT)) {
+  if((sock->window.last_send < 0) || (elapsed_ms >= DEFAULT_TIMEOUT)
+      || (sock->window.dup_ack_cnt >= 3)) {
     /* resend the leftmost bytes, up to MSS, in the window */
     uint16_t payload_len = MIN(send_winlen, (uint32_t)MSS);
     cmu_tcp_header_t *pkt = get_blank_pkt(sock, payload_len);
@@ -77,6 +78,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
     /* update the last sent time */
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
+    sock->window.dup_ack_cnt = 0;
 
     return pkt;
   }

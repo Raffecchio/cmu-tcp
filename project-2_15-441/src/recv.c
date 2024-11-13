@@ -37,8 +37,10 @@ int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
 }
 
 
-static int on_recv_ack(cmu_socket_t* sock, uint16_t dst, uint32_t ack_num, uint32_t adv_win) {
-  (void) dst;
+static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
+  uint32_t ack_num = get_ack(pkt);
+  uint32_t adv_win = get_advertised_window(pkt);
+
   /* validate */
   int ack_valid = (ack_num <=
       sock->window.last_ack_received + buf_len(&(sock->window.send_win)));
@@ -49,6 +51,9 @@ static int on_recv_ack(cmu_socket_t* sock, uint16_t dst, uint32_t ack_num, uint3
     // TODO (part of fast recovery)
   }
 
+  int is_standalone = (get_payload_len((const uint8_t*)pkt) == 0);
+  sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
+    && is_standalone;
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
   sock->window.last_ack_received = ack_num;
 
@@ -136,12 +141,11 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
  */
 int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   uint8_t flags = get_flags(pkt);
+  uint16_t payload_len = get_payload_len((uint8_t*)pkt);
   if(flags & ACK_FLAG_MASK) {
-    CHK(on_recv_ack(sock, get_dst(pkt), get_ack(pkt),
-          get_advertised_window(pkt)))
+    CHK(on_recv_ack(sock, pkt))
   }
   
-  uint16_t payload_len = get_payload_len((uint8_t*)pkt);
   if(payload_len > 0) {
     uint32_t num_recv = on_recv_data(sock, get_dst(pkt), get_seq(pkt),
         get_payload((uint8_t*)pkt), payload_len);

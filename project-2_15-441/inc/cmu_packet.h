@@ -104,7 +104,7 @@ uint8_t* get_payload(uint8_t* pkt);
  *
  * @return The length of the payload.
  */
-uint16_t get_payload_len(uint8_t* pkt);
+uint16_t get_payload_len(const uint8_t* pkt);
 
 /**
  * Sets the packet payload.
