@@ -34,8 +34,8 @@
 
 #define CHK(__va_args__)\
 {\
-  if(!(__va_args__))\
-    return EXIT_FAILURE; \
+  if(!(__va_args__)) {\
+    return EXIT_FAILURE; }\
 }
 
 #define CHK_MSG(MSG, __va_args__)\
@@ -57,15 +57,15 @@
 typedef struct {
   uint32_t last_ack_received;
   uint32_t num_inflight;
-  uint32_t send_win_cap;  // max # of bytes in the window
+  uint32_t adv_win;  // max # of bytes in the window
   buf_t send_win;
   time_t last_send;  // last send time for leftmost window byte in seconds
 
   uint32_t next_seq_expected;
-  // uint32_t recv_win_cap;  // a window containing received packets
   buf_t recv_win;  // a buffer temporarily holding received data
   buf_t recv_mask;  // a mask to keep track of which bytes in the
-                        // receive windowwere received
+                        // receive window were received
+  // uint32_t recv_win_cap;  // current max window size (depends on received_buf)
 } window_t;
 
 // int init_window(window_t *window);
