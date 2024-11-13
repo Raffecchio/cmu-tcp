@@ -34,7 +34,7 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len) {
 }
 
 
-int buf_pop(buf_t *buf, uint8_t **data, uint32_t len) {
+uint32_t buf_pop(buf_t *buf, uint8_t **data, uint32_t len) {
   if(len == 0) {
     if(data != NULL)
       *data = NULL;
