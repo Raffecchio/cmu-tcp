@@ -25,6 +25,7 @@
 #include "backend.h"
 #include "cmu_packet.h"
 
+#include "error.h"
 #include "buffer.h"
 
 
@@ -286,6 +287,8 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
     perror("ERROR negative length\n");
     return EXIT_ERROR;
   }
+  while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
+  uint8_t *pop_data = NULL;
   switch (flags) {
     case NO_FLAG:
       /* wait for a signal from the backend indicating recieved data */
@@ -293,9 +296,10 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
         pthread_cond_wait(&(sock->wait_cond), &(sock->recv_lock));
     // Fall through.
     case NO_WAIT:
-      while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
-      CHK(read_len = buf_pop(&(sock->received_buf), (uint8_t**)&buf, length));
+      read_len = buf_pop(&(sock->received_buf), &pop_data, length);
       pthread_mutex_unlock(&(sock->recv_lock));
+      CHK(read_len >= 0)
+      memcpy(buf, pop_data, read_len);
       break;
     default:
       perror("ERROR Unknown flag.\n");
@@ -307,11 +311,7 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
 
 int cmu_write(cmu_socket_t *sock, const void *buf, int length) {
   /* check if socket is dead */
-  while (pthread_mutex_lock(&(sock->death_lock)) != 0) {}
-  int death = sock->dying;  // NOTE: set to dying in cmu_close
-  pthread_mutex_unlock(&(sock->death_lock));
-  if(death)
-    return EXIT_FAILURE;
+  die_if_needed(sock);
 
   /* add the data to the sending buffer */
   while (pthread_mutex_lock(&(sock->send_lock)) != 0) {}

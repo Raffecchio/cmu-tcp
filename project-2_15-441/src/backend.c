@@ -25,6 +25,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "error.h"
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
 #include "send.h"
@@ -38,9 +39,15 @@
 
 
 
+/* send a packet to the destination referred to in a give nsocket. This
+ * function will fill in the advertised widow.*/
 static inline ssize_t send_pkt(const cmu_socket_t *sock,
-    const cmu_tcp_header_t *pkt) {
+    cmu_tcp_header_t *pkt) {
+  if(get_payload_len((uint8_t*)pkt) > 0) {
+    (void)0;
+  }
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
+  // set_advertised_window(pkt, buf_len(&(sock->window.recv_win)));
   ssize_t res = sendto(sock->socket, pkt, get_plen(pkt), 0,
         (struct sockaddr*)&(sock->conn), sizeof(sock->conn));
   return res;
@@ -49,7 +56,7 @@ static inline ssize_t send_pkt(const cmu_socket_t *sock,
 
 
 
-static void die_if_needed(cmu_socket_t *sock) {
+void die_if_needed(cmu_socket_t *sock) {
   /* get death lock (NOTE: pthread_mutex_lock returns non-zero on error) */
   while (pthread_mutex_lock(&(sock->death_lock)) != 0) {}
   int death = sock->dying;  // NOTE: set to dying in cmu_close
@@ -127,8 +134,6 @@ void *begin_backend(void *in) {
       set_ack(pkt, sock->window.next_seq_expected);
       send_pkt(sock, pkt);
     };
-
-    chk_send_pkt(sock);
   }
   pthread_exit(NULL);
   return NULL;

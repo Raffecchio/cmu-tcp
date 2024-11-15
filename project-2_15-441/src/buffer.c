@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "error.h"
 #include "buffer.h"
 
 
@@ -17,14 +18,8 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len) {
   if((buf->data == NULL) || (len == 0))
     return 0;
 
-  if(data == NULL) {
-    perror("Error: cannot write to NULL data in buf_get_data");
-    return -1;
-  }
-  if(i >= buf->len) {
-    perror("Error: cannot read from large index in buf_get_data");
-    return -1;
-  }
+  CHK_MSG("Error: cannot write to NULL data in buf_get_data", data != NULL)
+  CHK_MSG("Error: cannot read from large index in buf_get_data", i < buf->len)
 
   if(buf->len < i + len)
     len = buf->len - i;
@@ -45,7 +40,9 @@ uint32_t buf_pop(buf_t *buf, uint8_t **data, uint32_t len) {
     if(data != NULL)
       *data = buf->data;
     buf->data = NULL;
-    return buf->len;
+    uint32_t pop_len = buf->len;
+    buf->len = 0;
+    return pop_len;
   }
 
   if(data != NULL) {
@@ -100,10 +97,7 @@ int buf_ensure_len(buf_t *buf, uint32_t len) {
 int buf_append(buf_t *buf, const uint8_t *data, uint32_t len) {
   if(len == 0)
     return 0;
-  if(data == NULL) {
-    perror("Error: Invalid data ptr in buf_append");
-    return -1;
-  }
+  CHK_MSG("Error: Invalid data ptr given in buf_append", data != NULL)
   
   buf_ensure_len(buf, buf->len + len);
   memcpy(buf->data + buf->len - len, data, len);
@@ -143,6 +137,6 @@ int buf_free(buf_t *buf) {
   return 0;
 }
 
-uint32_t buf_len(buf_t *buf) {
+uint32_t buf_len(const buf_t *buf) {
   return buf->len;
 }

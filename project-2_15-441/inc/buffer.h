@@ -61,6 +61,6 @@ int buf_init(buf_t *buf);
 int buf_free(buf_t *buf);
 
 
-uint32_t buf_len(buf_t *buf);
+uint32_t buf_len(const buf_t *buf);
 
 #endif

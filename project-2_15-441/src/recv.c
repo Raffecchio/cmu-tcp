@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "error.h"
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
 #include "recv.h"
@@ -95,7 +96,7 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
   uint32_t last_seqnum = seq_num + payload_len;
   CHK_MSG("Error: Received data which would exceed the network buffer",
       last_seqnum - sock->window.next_seq_expected
-      >= buf_len(&(sock->window.recv_win)))
+      < buf_len(&(sock->window.recv_win)))
 
   CHK(buf_get(&(sock->window.recv_mask), 0) == 0);
 
@@ -143,7 +144,7 @@ int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   uint8_t flags = get_flags(pkt);
   uint16_t payload_len = get_payload_len((uint8_t*)pkt);
   if(flags & ACK_FLAG_MASK) {
-    CHK(on_recv_ack(sock, pkt))
+    on_recv_ack(sock, pkt);
   }
   
   if(payload_len > 0) {

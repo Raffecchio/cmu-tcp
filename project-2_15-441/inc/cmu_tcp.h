@@ -32,21 +32,6 @@
 #define EXIT_FAILURE 1
 
 
-#define CHK(__va_args__)\
-{\
-  if(!(__va_args__)) {\
-    return EXIT_FAILURE; }\
-}
-
-#define CHK_MSG(MSG, __va_args__)\
-{\
-  if(!(__va_args__)) {\
-    perror(MSG);\
-    return EXIT_FAILURE; \
-  }\
-}
-
-
 /**
  * Information necessary for windowing in both sending and receiving.
  *
