@@ -68,6 +68,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->socket = socket(AF_INET, SOCK_DGRAM, 0);
   memset(&(sock->conn), 0, sizeof(sock->conn));
   sock->conn.sin_family = AF_INET;
+  sock->my_port = (uint16_t)port;
   sock->conn.sin_port = htons((uint16_t)port);
   CHK_MSG("ERROR opening socket", sock->socket);
   switch (socket_type) {
@@ -108,7 +109,7 @@ static int active_connect(cmu_socket_t *sock) {
     uint16_t payload_len = 0;
     /* send SYN */
     uint16_t src = sock->my_port;
-    uint16_t dst = ntohs(sock->conn.sin_port);
+    uint16_t dst = sock->conn.sin_port;
     struct timeval tv;
     gettimeofday(&tv,NULL);
     srand(tv.tv_usec);
@@ -190,7 +191,7 @@ static int passive_connect(cmu_socket_t *sock) {
       size_t conn_len = sizeof(sock->conn);
       uint16_t payload_len = 0;
       uint16_t src = sock->my_port;
-      uint16_t dst = ntohs(sock->conn.sin_port);
+      uint16_t dst = sock->conn.sin_port;
       struct timeval tv;
       gettimeofday(&tv,NULL);
       srand(tv.tv_usec + 117);
@@ -254,7 +255,6 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   struct sockaddr_in my_addr;
   socklen_t len = sizeof(my_addr);
   getsockname(sock->socket, (struct sockaddr *)&my_addr, &len);
-  sock->my_port = ntohs(sock->my_port);
   // on opening the socket the backend begins
   printf("beginning backend thread...\n");
   pthread_create(&(sock->thread_id), NULL, begin_backend, (void *)sock);

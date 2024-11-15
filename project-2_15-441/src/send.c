@@ -40,7 +40,7 @@ cmu_tcp_header_t *get_base_pkt(cmu_socket_t *sock, uint16_t pl_len) {
   uint16_t pkt_len = hlen + pl_len;
   cmu_tcp_header_t* header = malloc(pkt_len);
   set_src(header, sock->my_port);
-  set_dst(header, ntohs(sock->conn.sin_port));
+  set_dst(header, sock->my_port);
   set_hlen(header, hlen);
   set_plen(header, pkt_len);
 

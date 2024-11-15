@@ -43,9 +43,6 @@
  * function will fill in the advertised widow.*/
 static inline ssize_t send_pkt(const cmu_socket_t *sock,
     cmu_tcp_header_t *pkt) {
-  if(get_payload_len(pkt) > 0) {
-    printf("break!\n");
-  }
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
   // set_advertised_window(pkt, buf_len(&(sock->window.recv_win)));
   ssize_t res = sendto(sock->socket, pkt, get_plen(pkt), 0,

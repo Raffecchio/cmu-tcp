@@ -21,7 +21,7 @@ int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
     return 0;
   if(get_hlen(pkt) != sizeof(cmu_tcp_header_t))
     return 0;
-  uint32_t payload_len = get_payload_len((uint8_t*)pkt);
+  uint32_t payload_len = get_payload_len(pkt);
   if(payload_len > 0) {
     uint32_t seq_num = get_seq(pkt);
     if(seq_num < sock->window.next_seq_expected)
@@ -52,7 +52,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     // TODO (part of fast recovery)
   }
 
-  int is_standalone = (get_payload_len((const uint8_t*)pkt) == 0);
+  int is_standalone = (get_payload_len(pkt) == 0);
   sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
     && is_standalone;
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
@@ -113,6 +113,7 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
     CHK(buf_pop(&(sock->window.recv_win), &pop_data, pop_len) == pop_len);
     CHK(buf_pop(&(sock->window.recv_win), NULL, pop_len) == pop_len);
     memcpy(pop_data, payload, payload_len);
+    sock->window.next_seq_expected += pop_len;
     while(pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
     buf_append(&(sock->received_buf), pop_data, pop_len);
     pthread_mutex_unlock(&(sock->recv_lock));
@@ -142,7 +143,7 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
  */
 int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   uint8_t flags = get_flags(pkt);
-  uint16_t payload_len = get_payload_len((uint8_t*)pkt);
+  uint16_t payload_len = get_payload_len(pkt);
   if(flags & ACK_FLAG_MASK) {
     on_recv_ack(sock, pkt);
   }
