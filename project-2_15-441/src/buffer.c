@@ -25,7 +25,7 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len) {
     len = buf->len - i;
 
   memcpy(data, buf->data + i, len);
-  return 0;
+  return len;
 }
 
 

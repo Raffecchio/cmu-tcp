@@ -1,6 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
+
 #define CHK(__va_args__)\
 {\
   if(!(__va_args__)) {\

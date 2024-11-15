@@ -43,8 +43,8 @@
  * function will fill in the advertised widow.*/
 static inline ssize_t send_pkt(const cmu_socket_t *sock,
     cmu_tcp_header_t *pkt) {
-  if(get_payload_len((uint8_t*)pkt) > 0) {
-    (void)0;
+  if(get_payload_len(pkt) > 0) {
+    printf("break!\n");
   }
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
   // set_advertised_window(pkt, buf_len(&(sock->window.recv_win)));
@@ -113,8 +113,9 @@ void *begin_backend(void *in) {
       (cmu_tcp_header_t *)chk_recv_pkt(sock, NO_WAIT);
     uint32_t num_recv = 0;
     uint32_t old_next_seq_expected = sock->window.next_seq_expected;
-    if((recv_pkt != NULL) && is_valid_recv(sock, recv_pkt))
+    if((recv_pkt != NULL) && is_valid_recv(sock, recv_pkt)) {
       num_recv = on_recv_pkt(sock, recv_pkt);
+    }
 
     /* check for a packet to send (and, well, send) */
     cmu_tcp_header_t *pkt_send =
@@ -125,11 +126,11 @@ void *begin_backend(void *in) {
       send_pkt(sock, pkt_send);
     }
 
+    int send_dup = (sock->window.next_seq_expected == old_next_seq_expected);
     if((num_recv > 0) &&
-        ((pkt_send == NULL) ||
-         (sock->window.next_seq_expected == old_next_seq_expected))) {
+        ((pkt_send == NULL) || send_dup)) {
       /* send standalone ACK */
-      cmu_tcp_header_t *pkt = get_blank_pkt(sock, 0);
+      cmu_tcp_header_t *pkt = get_base_pkt(sock, 0);
       set_flags(pkt, ACK_FLAG_MASK);
       set_ack(pkt, sock->window.next_seq_expected);
       send_pkt(sock, pkt);
