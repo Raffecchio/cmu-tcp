@@ -9,6 +9,7 @@
 #include "error.h"
 #include "buffer.h"
 #include "send.h"
+#include "cca.h"
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -19,8 +20,9 @@ typedef cmu_tcp_header_t hdr_t;
 static int fill_send_win(cmu_socket_t *sock) {
   uint32_t send_winlen = buf_len(&(sock->window.send_win));
   uint32_t winlen_limit = MIN(sock->window.adv_win, sock->window.cwin);
-  if(send_winlen >= winlen_limit)
+  if(send_winlen >= winlen_limit) {
     return 0;
+  }
 
   CHK(winlen_limit >= send_winlen);
 
@@ -100,7 +102,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   gettimeofday(&now, NULL);
   double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
-  if(timeout || (sock->window.dup_ack_cnt >= 3)) {
+  if(timeout == 1) {
   // if((sock->window.num_inflight > 0)
   //     && (sock->window.last_send >= 0)
   //     && ((elapsed_ms >= DEFAULT_TIMEOUT)
@@ -112,7 +114,9 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
 
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
+
     sock->window.dup_ack_cnt = 0;
+    cca_enter_ss_from_timeout(sock);
     return pkt;
   }
 

@@ -41,7 +41,7 @@
 
 /* send a packet to the destination referred to in a give nsocket. This
  * function will fill in the advertised widow.*/
-static inline ssize_t send_pkt(const cmu_socket_t *sock,
+ssize_t send_pkt(const cmu_socket_t *sock,
     cmu_tcp_header_t *pkt) {
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
   // set_advertised_window(pkt, buf_len(&(sock->window.recv_win)));
@@ -119,7 +119,7 @@ void *begin_backend(void *in) {
 
     /* check for a packet to send (and, well, send) */
     cmu_tcp_header_t *pkt_send;
-    pkt_send = (cmu_tcp_header_t *)chk_send_pkt(sock);
+    pkt_send = (cmu_tcp_header_t *) chk_send_pkt(sock);
     if(pkt_send != NULL) {
       set_ack(pkt_send, sock->window.next_seq_expected);
       set_flags(pkt_send, ACK_FLAG_MASK);

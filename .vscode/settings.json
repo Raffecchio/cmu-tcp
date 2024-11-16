@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "cmu_packet.h": "c",
+        "types.h": "c"
+    }
+}

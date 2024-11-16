@@ -4,7 +4,7 @@ SRC_DIR = $(TOP_DIR)/src
 BUILD_DIR = $(TOP_DIR)/build
 CC=gcc
 FLAGS = -pthread -fPIC -g -ggdb -pedantic -Wall -Wextra -DDEBUG -I$(INC_DIR)
-OBJS = $(BUILD_DIR)/cmu_packet.o $(BUILD_DIR)/cmu_tcp.o $(BUILD_DIR)/backend.o $(BUILD_DIR)/buffer.o $(BUILD_DIR)/recv.o $(BUILD_DIR)/send.o
+OBJS = $(BUILD_DIR)/cmu_packet.o $(BUILD_DIR)/cmu_tcp.o $(BUILD_DIR)/backend.o $(BUILD_DIR)/buffer.o $(BUILD_DIR)/recv.o $(BUILD_DIR)/send.o $(BUILD_DIR)/cca.o
 
 # --- ADDED FOR TESTING ----
 TEST_SRC_DIR = $(TOP_DIR)/tests

@@ -10,6 +10,7 @@
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
 #include "recv.h"
+#include "cca.h"
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -53,13 +54,15 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     return 0;
 
   int is_standalone = (get_payload_len(pkt) == 0);
-  sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
+  int is_dup_ack = (ack_num == sock->window.last_ack_received)
     && is_standalone;
+  sock->window.dup_ack_cnt += is_dup_ack;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
     struct timeval now;
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
+    cca_new_ack(sock);
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
   }
@@ -71,6 +74,13 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   sock->window.num_inflight -= num_newly_acked;
   
   sock->window.adv_win = adv_win;
+  if(is_dup_ack == 1 && sock->window.dup_ack_cnt < 3) {
+    cca_dup_ack_cnt_three(sock);
+  }
+
+  if(sock->window.dup_ack_cnt == 3) {
+    cca_dup_ack_cnt_three(sock);
+  }
   return 0;
 }
 
