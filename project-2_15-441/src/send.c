@@ -110,7 +110,9 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
 
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
-    // sock->window.dup_ack_cnt = 0;
+    sock->ssthresh = sock->window.cwin/2;
+        sock->window.cwin = MSS;
+    sock->window.dup_ack_cnt = 0;
     return pkt;
   }
 
