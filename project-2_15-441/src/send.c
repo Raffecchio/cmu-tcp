@@ -37,20 +37,33 @@ static int fill_send_win(cmu_socket_t *sock) {
 
 
 cmu_tcp_header_t *get_base_pkt(cmu_socket_t *sock, uint16_t pl_len) {
-  uint16_t hlen = sizeof(cmu_tcp_header_t);
-  uint16_t pkt_len = hlen + pl_len;
-  cmu_tcp_header_t* header = malloc(pkt_len);
-  set_src(header, sock->my_port);
-  set_dst(header, sock->my_port);
-  set_hlen(header, hlen);
-  set_plen(header, pkt_len);
+  // uint16_t hlen = sizeof(cmu_tcp_header_t);
+  // uint16_t plen = hlen + pl_len;
+  // cmu_tcp_header_t* header = malloc(pkt_len);
+  // set_src(header, sock->my_port);
+  // set_dst(header, sock->my_port);
+  // set_hlen(header, hlen);
+  // set_plen(header, pkt_len);
 
-  set_seq(header, 0);
-  set_ack(header, 0);
-  set_flags(header, 0);
-  set_advertised_window(header, buf_len(&(sock->window.recv_win)));
-  set_extension_length(header, 0);
-  return header;
+  // set_seq(header, sock->window.last_ack_received);
+  // set_ack(header, sock->window.next_seq_expected);
+  // set_flags(header, 0);
+  // set_advertised_window(header, buf_len(&(sock->window.recv_win)));
+  // set_extension_length(header, 0);
+
+  // return header;
+
+  uint16_t hlen = sizeof(cmu_tcp_header_t);
+  uint16_t plen = hlen + pl_len;
+  uint16_t src = sock->my_port;
+  uint16_t dst = ntohs(sock->conn.sin_port);
+  uint32_t seq = sock->window.last_ack_received;
+  uint32_t ack = sock->window.next_seq_expected;
+  uint8_t flags = 0;
+  uint16_t advertised_window = buf_len(&(sock->window.recv_win));
+  uint8_t extension_length = 0;
+  return (hdr_t*)create_packet(src, dst, seq, ack, hlen, plen, flags,
+      advertised_window, extension_length, NULL, NULL, pl_len);
 }
 
 
@@ -86,8 +99,11 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   struct timeval now;
   gettimeofday(&now, NULL);
   double elapsed_ms = (sock->window.last_send - now.tv_sec)*1000.0;
-  if((sock->window.last_send < 0) || (elapsed_ms >= DEFAULT_TIMEOUT)
-      || (sock->window.dup_ack_cnt >= 3)) {
+  if((sock->window.num_inflight > 0)
+      && ((sock->window.last_send < 0)
+      || (elapsed_ms >= DEFAULT_TIMEOUT)
+      || (sock->window.dup_ack_cnt >= 3))) {
+    printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight = MAX(get_payload_len(pkt),
         sock->window.num_inflight);

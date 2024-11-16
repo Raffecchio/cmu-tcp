@@ -48,6 +48,7 @@ def test_basic_ack_packets():
                     CMUTCP(plen=25, seq_num=1000, flags=SYN_MASK)
                 )
                 syn_ack_pkt = sr1(syn_pkt, timeout=TIMEOUT, iface=IFNAME)
+                print("server response syn_ack has ack:", syn_ack_pkt[CMUTCP].ack_num)
 
                 if (
                     syn_ack_pkt is None
@@ -62,7 +63,6 @@ def test_basic_ack_packets():
                     conn.run(STOP_TESTING_SERVER_CMD)
                     return
 
-                print(syn_ack_pkt[CMUTCP].seq_num)
 
                 ack_pkt = (
                     ip /

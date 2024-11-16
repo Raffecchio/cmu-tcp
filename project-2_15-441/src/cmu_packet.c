@@ -146,8 +146,10 @@ uint8_t* create_packet(uint16_t src, uint16_t dst, uint32_t seq, uint32_t ack,
   set_header(header, src, dst, seq, ack, hlen, plen, flags, adv_window, ext_len,
              ext_data);
 
-  uint8_t* pkt_payload = get_payload(packet);
-  memcpy(pkt_payload, payload, payload_len);
+  if(payload != NULL) {
+    uint8_t* pkt_payload = get_payload(packet);
+    memcpy(pkt_payload, payload, payload_len);
+  }
 
   return packet;
 }

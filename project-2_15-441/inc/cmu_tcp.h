@@ -49,6 +49,7 @@ typedef struct {
                          // add to this)
 
   uint32_t next_seq_expected;
+  uint32_t last_seq_received;
   buf_t recv_win;  // a buffer temporarily holding received data
   buf_t recv_mask;  // a mask to keep track of which bytes in the
                         // receive window were received

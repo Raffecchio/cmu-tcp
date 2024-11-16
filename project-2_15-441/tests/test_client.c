@@ -8,26 +8,18 @@
  * permission of the 15-441/641 course staff.
  *
  *
- * This file implements a simple CMU-TCP server. Its purpose is to provide
+ * This file implements a simple CMU-TCP client. Its purpose is to provide
  * simple test cases and demonstrate how the sockets will be used.
  */
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "cmu_tcp.h"
 
 #define BUF_SIZE 11000
 
-/*
- * Param: sock - used for reading and writing to a connection
- *
- * Purpose: To provide some simple test cases and demonstrate how
- *  the sockets will be used.
- *
- */
 void functionality(cmu_socket_t *sock) {
   uint8_t buf[BUF_SIZE];
   FILE *fp;
@@ -36,18 +28,6 @@ void functionality(cmu_socket_t *sock) {
   n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
   printf("R: %s\n", buf);
   printf("N: %d\n", n);
-  cmu_write(sock, "hi there", 9);
-  n = cmu_read(sock, buf, 200, NO_FLAG);
-  printf("R: %s\n", buf);
-  printf("N: %d\n", n);
-  cmu_write(sock, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
-
-  sleep(1);
-  n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
-  printf("N: %d\n", n);
-  fp = fopen("/tmp/file.c", "w");
-  fwrite(buf, 1, n, fp);
-  fclose(fp);
 }
 
 int main() {
@@ -55,7 +35,7 @@ int main() {
   char *serverip;
   char *serverport;
   cmu_socket_t socket;
-  
+
   serverip = getenv("server15441");
   if (!serverip) {
     serverip = "10.0.1.1";
@@ -66,7 +46,7 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
-  if (cmu_socket(&socket, TCP_LISTENER, portno, serverip) < 0) {
+  if (cmu_socket(&socket, TCP_INITIATOR, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }
 

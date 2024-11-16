@@ -16,13 +16,19 @@
 
 typedef cmu_tcp_header_t hdr_t;
 static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+
 
 int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   // TODO (?)
   (void)pkt;
-  if (get_flags(pkt) < 3 || get_flags(pkt) > 5) return 0;
-  if (get_dst(pkt) != 15441) return 0;
-  if (get_hlen(pkt) != sizeof(cmu_tcp_header_t)) return 0;
+  // if(get_flags(pkt) < 3 || get_flags(pkt) > 5)
+  //   return 0;
+  // if(get_dst(pkt) != 15441)
+  //   return 0;
+  // if(get_hlen(pkt) != sizeof(cmu_tcp_header_t))
+  //   return 0;
   uint32_t payload_len = get_payload_len(pkt);
   if (payload_len > 0) {
     uint32_t seq_num = get_seq(pkt);
@@ -202,7 +208,11 @@ static int on_recv_data(cmu_socket_t *sock, uint16_t dst, uint32_t seq_num,
     }
   }
 
-  if (data_made_available_to_user) {
+  /* reminder: sock->window.last_seq_received is useful when waiting to die */
+  sock->window.last_seq_received = MAX(sock->window.last_seq_received,
+      last_seqnum);
+
+  if(data_made_available_to_user) {
     pthread_cond_signal(&(sock->wait_cond));
   }
     

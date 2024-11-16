@@ -63,7 +63,10 @@ void die_if_needed(cmu_socket_t *sock) {
   // NOTE: At this point, since sock->dying is true, the implementation is
   // guaranteed to not add any more data to the sending buffer, so no need
   // to get a lock here
-  if (buf_len(&(sock->sending_buf)) > 0)
+  if ((buf_len(&(sock->sending_buf)) > 0)
+      // || (buf_len(&(sock->received_buf)) > 0)
+      // || (buf_len(&(sock->window.send_win)) > 0)
+      || (sock->window.last_seq_received > sock->window.next_seq_expected))
     return;
   pthread_exit(NULL);
 }
