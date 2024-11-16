@@ -94,7 +94,7 @@ typedef struct {
   pthread_t thread_id;
   uint16_t my_port;
   struct sockaddr_in conn;
-  int ssthresh;
+  uint32_t ssthresh;
   int is_fast_recovery;
 } cmu_socket_t;
 

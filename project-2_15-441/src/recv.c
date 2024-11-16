@@ -10,7 +10,10 @@
 
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
+#include "send.h"
+#include "backend.h"
 #include "error.h"
+
 typedef cmu_tcp_header_t hdr_t;
 static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
 
@@ -36,12 +39,6 @@ int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
 }
 
 static int fast_recovery(cmu_socket_t *sock) {
-  int32_t cwin = sock->window.cwin;
-
-  int32_t ssthresh = sock->ssthresh;
-  int is_slow_start = cwin < ssthresh;
-  ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
-  sock->window.cwin == ssthresh + (3 * MSS);
   sock->is_fast_recovery = 1;
   hdr_t *pkt_send = get_win_pkt(sock, 0);
   if (pkt_send != NULL) {
@@ -51,18 +48,30 @@ static int fast_recovery(cmu_socket_t *sock) {
   }
   uint8_t *fast_rec_ack = chk_recv_pkt(sock, TIMEOUT);
   if (fast_rec_ack == NULL) {
+    // transitions to slow start 
     sock->is_fast_recovery = 0;
-    ssthresh = cwin / 2;
-    cwin = MSS;
-    sock->ssthresh = ssthresh;
-    sock->window.cwin = cwin;
+    sock->ssthresh = sock->window.cwin / 2;
+    sock->window.cwin = MSS;
     return 0;
   }
 
   if ((fast_rec_ack != NULL) && is_valid_recv(sock, fast_rec_ack)) {
-    int num_recv = on_recv_pkt(sock, fast_rec_ack);
+    on_recv_pkt(sock, fast_rec_ack);
   }
   return 0;
+}
+
+static void new_ack_phase(cmu_socket_t *sock) {
+  sock->window.dup_ack_cnt = 0;
+    int is_slow_start = sock->window.cwin < sock->ssthresh;
+    if (sock->is_fast_recovery == 1) {
+      sock->window.cwin = sock->ssthresh;
+      sock->is_fast_recovery = 0;
+    } else if (is_slow_start == 1) {
+        sock->window.cwin += MSS;
+      } else { // congestion avoidance
+        sock->window.cwin += (MSS * (MSS / sock->window.cwin));
+      }
 }
 
 static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
@@ -91,20 +100,9 @@ static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
 
   sock->window.last_ack_received = ack_num;
 
-  // new ack phase
+  // New ack and its affect on each phase
   if (num_newly_acked > 0) {
-    sock->window.dup_ack_cnt = 0;
-    int is_slow_start = sock->window.cwin < sock->ssthresh;
-
-    if (sock->is_fast_recovery == 1) {
-      sock->window.cwin = sock->ssthresh;
-      sock->is_fast_recovery = 0;
-    } else if (is_slow_start == 1) {
-        sock->window.cwin += MSS;
-      } else { // congestion avoidance
-        sock->window.cwin += (MSS * (MSS / sock->window.cwin));
-      }
-    
+    new_ack_phase(sock);
   }
 
   /* shift the sending window */
@@ -112,7 +110,8 @@ static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   sock->window.num_inflight -= num_newly_acked;
 
   sock->window.adv_win = adv_win;
-  // dup ack (less than 3)
+  
+  // Take appropriate action for dup ack < 3
   if (is_dup_ack == 1 && sock->window.dup_ack_cnt < 3) {
     if (sock->is_fast_recovery == 1) {
       sock->window.cwin += MSS;
@@ -120,9 +119,15 @@ static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   }
   if (sock->window.dup_ack_cnt == 3) {
     if (sock->is_fast_recovery == 0) {
-      fast_recovery(sock);
+        int32_t cwin = sock->window.cwin;
+        int32_t ssthresh = sock->ssthresh;
+        int is_slow_start = cwin < ssthresh;
+        ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
+        sock->window.cwin = ssthresh + (3 * MSS);
+        fast_recovery(sock);
     } else {
-      sock->is_fast_recovery == 0;
+      // Transition slow start
+      sock->is_fast_recovery = 0;
       sock->ssthresh = sock->window.cwin / 2;
       sock->window.cwin = sock->ssthresh + (3 * MSS);
     }
@@ -153,15 +158,16 @@ static int on_recv_data(cmu_socket_t *sock, uint16_t dst, uint32_t seq_num,
                         const uint8_t *payload, uint16_t payload_len) {
   (void)dst;
   /* ignore data if it has any bytes already ACKed */
-  if (seq_num < sock->window.next_seq_expected) return 0;
-
+  if (seq_num < sock->window.next_seq_expected) {
+    return 0;
+  }
   uint32_t last_seqnum = seq_num + payload_len;
   CHK_MSG("Error: Received data which would exceed the network buffer",
           last_seqnum - sock->window.next_seq_expected <
               buf_len(&(sock->window.recv_win)))
 
   CHK(buf_get(&(sock->window.recv_mask), 0) == 0);
-
+  
   /* check if data can be popped & added to the received buffer */
   int data_made_available_to_user = (seq_num == sock->window.next_seq_expected);
   if (data_made_available_to_user) {
@@ -169,8 +175,9 @@ static int on_recv_data(cmu_socket_t *sock, uint16_t dst, uint32_t seq_num,
     uint32_t pop_len = payload_len;
     uint32_t winlen = buf_len(&(sock->window.recv_win));
     while ((pop_len < winlen) &&
-           (buf_get(&(sock->window.recv_mask), pop_len) > 0))
+           (buf_get(&(sock->window.recv_mask), pop_len) > 0)) {
       ++pop_len;
+    }
     uint8_t *pop_data = NULL;
     CHK(buf_pop(&(sock->window.recv_win), &pop_data, pop_len) == pop_len);
     CHK(buf_pop(&(sock->window.recv_win), NULL, pop_len) == pop_len);
@@ -194,8 +201,10 @@ static int on_recv_data(cmu_socket_t *sock, uint16_t dst, uint32_t seq_num,
     }
   }
 
-  if (data_made_available_to_user) pthread_cond_signal(&(sock->wait_cond));
-
+  if (data_made_available_to_user) {
+    pthread_cond_signal(&(sock->wait_cond));
+  }
+    
   return payload_len;
 }
 
