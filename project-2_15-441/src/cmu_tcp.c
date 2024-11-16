@@ -108,6 +108,7 @@ static int active_connect(cmu_socket_t *sock) {
     // Initiator handshake;
     size_t conn_len = sizeof(sock->conn);
     uint16_t payload_len = 0;
+
     /* send SYN */
     uint16_t src = sock->my_port;
     uint16_t dst = sock->my_port;
@@ -158,7 +159,8 @@ static int active_connect(cmu_socket_t *sock) {
 
     /* send ACK */
     uint8_t *response_packet_ack = create_packet(
-        src, dst, seq_syn_sent, seq_syn_ack_recv + 1, hlen, hlen + 0,
+        src, dst, sock->window.last_ack_received,
+        sock->window.next_seq_expected, hlen, hlen + 0,
         ACK_FLAG_MASK, adv_window, 0, NULL, NULL, 0);
     printf("%d\n", get_flags((cmu_tcp_header_t *)response_packet_ack));
     sendto(sock->socket, response_packet_ack, plen, 0,
@@ -178,6 +180,7 @@ static int active_connect(cmu_socket_t *sock) {
 static int passive_connect(cmu_socket_t *sock) {
   while (1) {
     
+    /* get SYN */
     uint8_t *pkt_syn_recv = chk_recv_pkt(sock, TIMEOUT);
     if(pkt_syn_recv == NULL)
       continue;
@@ -189,10 +192,10 @@ static int passive_connect(cmu_socket_t *sock) {
 
     if (flags != SYN_FLAG_MASK)
       continue;
-    while (1) {
-      sock->window.next_seq_expected = seq_syn_recv + 1;
-      sock->window.last_seq_received = sock->window.next_seq_expected - 1;
+    sock->window.next_seq_expected = seq_syn_recv + 1;
+    sock->window.last_seq_received = sock->window.next_seq_expected - 1;
       
+    while (1) {
       // SYN_ACKING - SYN_FLAG_MASK
       size_t conn_len = sizeof(sock->conn);
       uint16_t payload_len = 0;
