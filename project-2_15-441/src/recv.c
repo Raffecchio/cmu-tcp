@@ -147,8 +147,9 @@ static void update_recv_win(cmu_socket_t *sock) {
   buf_ensure_len(&(sock->window.recv_win), new_winlen);
   buf_ensure_len(&(sock->window.recv_mask), new_winlen);
   /* zero out any newly made space at the end */
-  for (uint32_t i = old_winlen; i < new_winlen; i++)
+  for (uint32_t i = old_winlen; i < new_winlen; i++) {
     buf_set(&(sock->window.recv_mask), i, 0);
+  }
 }
 
 /**
