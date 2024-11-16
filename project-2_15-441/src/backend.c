@@ -64,8 +64,8 @@ void die_if_needed(cmu_socket_t *sock) {
   // guaranteed to not add any more data to the sending buffer, so no need
   // to get a lock here
   if ((buf_len(&(sock->sending_buf)) > 0)
-      // || (buf_len(&(sock->received_buf)) > 0)
-      // || (buf_len(&(sock->window.send_win)) > 0)
+      || (buf_len(&(sock->received_buf)) > 0)
+      || (buf_len(&(sock->window.send_win)) > 0)
       || (sock->window.last_seq_received > sock->window.next_seq_expected))
     return;
   pthread_exit(NULL);
@@ -118,8 +118,8 @@ void *begin_backend(void *in) {
     }
 
     /* check for a packet to send (and, well, send) */
-    cmu_tcp_header_t *pkt_send =
-      (cmu_tcp_header_t *)chk_send_pkt(sock);
+    cmu_tcp_header_t *pkt_send;
+    pkt_send = (cmu_tcp_header_t *)chk_send_pkt(sock);
     if(pkt_send != NULL) {
       set_ack(pkt_send, sock->window.next_seq_expected);
       set_flags(pkt_send, ACK_FLAG_MASK);
