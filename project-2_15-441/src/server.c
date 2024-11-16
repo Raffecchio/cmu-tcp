@@ -19,7 +19,7 @@
 
 #include "cmu_tcp.h"
 
-#define BUF_SIZE 10000
+#define BUF_SIZE 11000
 
 /*
  * Param: sock - used for reading and writing to a connection

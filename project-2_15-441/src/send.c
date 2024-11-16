@@ -44,8 +44,8 @@ cmu_tcp_header_t *get_base_pkt(cmu_socket_t *sock, uint16_t pl_len) {
   set_hlen(header, hlen);
   set_plen(header, pkt_len);
 
-  set_seq(header, 0);
-  set_ack(header, 0);
+  set_seq(header, sock->window.last_ack_received);
+  set_ack(header, sock->window.next_seq_expected);
   set_flags(header, 0);
   set_advertised_window(header, buf_len(&(sock->window.recv_win)));
   set_extension_length(header, 0);

@@ -59,6 +59,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   buf_init(&(sock->window.recv_win));
   buf_ensure_len(&(sock->window.recv_win), MAX_NETWORK_BUFFER);
   sock->window.next_seq_expected = 0;
+  sock->window.last_seq_received = 0;
   buf_init(&(sock->window.recv_mask));
   buf_ensure_len(&(sock->window.recv_mask), MAX_NETWORK_BUFFER);
   for(uint32_t i = 0; i < MAX_NETWORK_BUFFER; i++)
@@ -109,7 +110,8 @@ static int active_connect(cmu_socket_t *sock) {
     uint16_t payload_len = 0;
     /* send SYN */
     uint16_t src = sock->my_port;
-    uint16_t dst = sock->conn.sin_port;
+    uint16_t dst = sock->my_port;
+    // uint16_t dst = sock->conn.sin_port;
     struct timeval tv;
     gettimeofday(&tv,NULL);
     srand(tv.tv_usec);
@@ -143,6 +145,7 @@ static int active_connect(cmu_socket_t *sock) {
     sock->window.last_ack_received = get_ack(hdr_syn_ack_recv);
     uint32_t seq_syn_ack_recv = get_seq(hdr_syn_ack_recv);
     sock->window.next_seq_expected = seq_syn_ack_recv + 1;
+    sock->window.last_seq_received = seq_syn_ack_recv;
     printf("CLIENT Ack: sock->window.last_ack_received %d\n",
         sock->window.last_ack_received);
     printf("CLIENT: sock->window.next_seq_expected %d\n",
@@ -191,7 +194,8 @@ static int passive_connect(cmu_socket_t *sock) {
       size_t conn_len = sizeof(sock->conn);
       uint16_t payload_len = 0;
       uint16_t src = sock->my_port;
-      uint16_t dst = sock->conn.sin_port;
+      uint16_t dst = sock->my_port;
+      // uint16_t dst = sock->conn.sin_port;
       struct timeval tv;
       gettimeofday(&tv,NULL);
       srand(tv.tv_usec + 117);
@@ -225,6 +229,7 @@ static int passive_connect(cmu_socket_t *sock) {
 
       sock->window.last_ack_received = get_ack(hdr_two);
       sock->window.next_seq_expected = get_seq(hdr_two) + 1;
+      sock->window.last_seq_received = get_seq(hdr_two);
       sock->window.adv_win = get_advertised_window(hdr_two);
       free(pkt_ack_recv);
       return 0;

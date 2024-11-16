@@ -11,6 +11,9 @@
 #include "cmu_tcp.h"
 #include "recv.h"
 
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+
 
 int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
   // TODO (?)
@@ -77,7 +80,7 @@ static void update_recv_win(cmu_socket_t *sock) {
   uint32_t new_winlen = MAX_NETWORK_BUFFER - recv_buf_len;
   buf_ensure_len(&(sock->window.recv_win), new_winlen);
   buf_ensure_len(&(sock->window.recv_mask), new_winlen);
-  /* zero out any newly made space at the end */
+  /* zero out any newly made space in the mask at the end */
   for(uint32_t i = old_winlen; i < new_winlen; i++)
     buf_set(&(sock->window.recv_mask), i, 0);
 }
@@ -130,6 +133,10 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
       buf_set(&(sock->window.recv_win), buf_start + i, payload[i]);
     }
   }
+
+  /* reminder: sock->window.last_seq_received is useful when waiting to die */
+  sock->window.last_seq_received = MAX(sock->window.last_seq_received,
+      last_seqnum);
 
   if(data_made_available_to_user)
     pthread_cond_signal(&(sock->wait_cond));
