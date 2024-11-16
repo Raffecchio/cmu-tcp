@@ -48,6 +48,7 @@ def test_pcap_acks():
     if len(packets) <= 10:
         print("Test Failed")
         return
+    print("tested pcap acks")
 
     expected_acks = []
     ack_nums = []
