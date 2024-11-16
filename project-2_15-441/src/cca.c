@@ -16,6 +16,9 @@
 #include "recv.h"
 #include "send.h"
 
+
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
 void cca_dup_ack(cmu_socket_t *sock) {
   if (sock->is_fast_recovery == 0) {
     
@@ -55,9 +58,9 @@ void fast_recovery(cmu_socket_t *sock) {
 
   sock->window.num_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
 
-    gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_sec;
-    sock->window.dup_ack_cnt = 0;
+  gettimeofday(&now, NULL);
+  sock->window.last_send = now.tv_sec;
+  sock->window.dup_ack_cnt = 0;
 
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
