@@ -140,7 +140,7 @@ static int active_connect(cmu_socket_t *sock) {
     cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
     flags = get_flags(hdr_syn_ack_recv);
     // received syn_ack;
-    if (flags != (SYN_FLAG_MASK | ACK_FLAG_MASK))
+    if (flags != (SYN_FLAG_MASK | ACK_FLAG_MASK)) 
       continue;
     int syn_ack_acked = get_ack(hdr_syn_ack_recv) == (seq_syn_sent + 1);
     if (!syn_ack_acked)
