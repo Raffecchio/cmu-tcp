@@ -27,7 +27,7 @@ void cca_dup_ack_cnt_three(cmu_socket_t *sock) {
         fast_recovery(sock);
     } else {
       // Treat transition as timeout to slow start
-      cca_enter_ss_from_timeout(sock);
+      // cca_enter_ss_from_timeout(sock);
     }
     return;
 }
