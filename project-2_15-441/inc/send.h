@@ -13,7 +13,7 @@
 int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
 cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock);
 cmu_tcp_header_t* get_base_pkt(cmu_socket_t *sock, uint16_t pl_len);
-
+cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i);
 
 #endif
 

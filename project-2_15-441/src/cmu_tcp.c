@@ -32,7 +32,7 @@
 
 int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
     const int port, const char *server_ip) {
-  CHK_MSG("ERROR server_ip NULL", server_ip != NULL)
+  CHK_MSG("ERROR server_ip NULL", server_ip != NULL);
 
   sock->type = socket_type;
   sock->dying = 0;
@@ -47,7 +47,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   pthread_mutex_init(&(sock->send_lock), NULL);
   buf_init(&(sock->window.send_win));
   CHK_MSG("ERROR condition variable not set\n",
-      pthread_cond_init(&sock->wait_cond, NULL) == 0)
+      pthread_cond_init(&sock->wait_cond, NULL) == 0);
 
   /* windowing */
   buf_init(&(sock->window.send_win));
@@ -56,6 +56,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->window.last_ack_received = 0;
   sock->window.num_inflight = 0;
   sock->window.dup_ack_cnt = 0;
+  sock->window.cwin = MSS;
   buf_init(&(sock->window.recv_win));
   buf_ensure_len(&(sock->window.recv_win), MAX_NETWORK_BUFFER);
   sock->window.next_seq_expected = 0;
@@ -70,6 +71,8 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->conn.sin_family = AF_INET;
   sock->my_port = (uint16_t)port;
   sock->conn.sin_port = htons((uint16_t)port);
+  sock->ssthresh = 64000;
+  sock->is_fast_recovery = 0;
   CHK_MSG("ERROR opening socket", sock->socket);
   switch (socket_type) {
     case TCP_INITIATOR:
@@ -81,7 +84,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
       my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
       my_addr.sin_port = 0;
       CHK_MSG("error on binding",
-          bind(sock->socket, (struct sockaddr *)&my_addr, sizeof(my_addr)) >= 0)
+          bind(sock->socket, (struct sockaddr *)&my_addr, sizeof(my_addr)) >= 0);
       break;
 
     case TCP_LISTENER:
@@ -91,7 +94,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
                  sizeof(int));
       CHK_MSG("ERROR on binding",
           bind(sock->socket, (struct sockaddr *)&(sock->conn),
-            sizeof(sock->conn)) >= 0)
+            sizeof(sock->conn)) >= 0);
       break;
 
     default:
@@ -128,7 +131,7 @@ static int active_connect(cmu_socket_t *sock) {
                       adv_window, ext_len, ext_data, payload, payload_len);
     CHK_MSG("Error in sending SYN",
         sendto(sock->socket, pkt_syn, plen, 0, (struct sockaddr *)&(sock->conn),
-           conn_len))
+           conn_len));
 
     /* receive SYN_ACK */
     uint8_t *pkt_syn_ack = chk_recv_pkt(sock, TIMEOUT);
@@ -241,11 +244,11 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
   switch (socket_type) {
     case TCP_INITIATOR:
-      CHK(active_connect(sock) >= 0)
+      CHK(active_connect(sock) >= 0);
       break;
 
     case TCP_LISTENER:
-      CHK(passive_connect(sock) >= 0)
+      CHK(passive_connect(sock) >= 0);
       break;
 
     default:
@@ -298,7 +301,7 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
     case NO_WAIT:
       read_len = buf_pop(&(sock->received_buf), &pop_data, length);
       pthread_mutex_unlock(&(sock->recv_lock));
-      CHK(read_len >= 0)
+      CHK(read_len >= 0);
       memcpy(buf, pop_data, read_len);
       break;
     default:

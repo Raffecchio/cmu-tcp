@@ -18,14 +18,15 @@ typedef cmu_tcp_header_t hdr_t;
 /* adds any available bytes to the send window from the sending buffer */
 static int fill_send_win(cmu_socket_t *sock) {
   uint32_t send_winlen = buf_len(&(sock->window.send_win));
-  if(send_winlen >= sock->window.adv_win)
+  uint32_t winlen_limit = MIN(sock->window.adv_win, sock->window.cwin);
+  if(send_winlen >= winlen_limit)
     return 0;
 
-  CHK(sock->window.adv_win >= send_winlen)
+  CHK(winlen_limit >= send_winlen);
 
   while (pthread_mutex_lock(&(sock->send_lock)) != 0) {}
   uint32_t num_fill = MIN(buf_len(&(sock->sending_buf)),
-      (sock->window.adv_win - sock->window.num_inflight));
+      (winlen_limit - send_winlen));
   uint8_t *new_send_data;
   buf_pop(&(sock->sending_buf), &new_send_data, num_fill);
   pthread_mutex_unlock(&(sock->send_lock));
@@ -57,7 +58,7 @@ cmu_tcp_header_t *get_base_pkt(cmu_socket_t *sock, uint16_t pl_len) {
  * Get a packet from the send window.
  * i must be <= sock->window.num_inflight
  */
-static cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i) {
+cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i) {
     /* resend the leftmost bytes, up to MSS, in the window */
     uint32_t send_winlen = buf_len(&(sock->window.send_win));
     uint16_t payload_len = MIN(send_winlen - i, (uint32_t)MSS);

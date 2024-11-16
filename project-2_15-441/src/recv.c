@@ -1,3 +1,5 @@
+#include "recv.h"
+
 #include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -6,179 +8,238 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "error.h"
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
-#include "recv.h"
+#include "error.h"
+typedef cmu_tcp_header_t hdr_t;
+static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
 
-
-int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
+int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   // TODO (?)
   (void)pkt;
-  if(get_flags(pkt) < 3 || get_flags(pkt) > 5)
-    return 0;
-  if(get_dst(pkt) != 15441)
-    return 0;
-  if(get_hlen(pkt) != sizeof(cmu_tcp_header_t))
-    return 0;
+  if (get_flags(pkt) < 3 || get_flags(pkt) > 5) return 0;
+  if (get_dst(pkt) != 15441) return 0;
+  if (get_hlen(pkt) != sizeof(cmu_tcp_header_t)) return 0;
   uint32_t payload_len = get_payload_len(pkt);
-  if(payload_len > 0) {
+  if (payload_len > 0) {
     uint32_t seq_num = get_seq(pkt);
-    if(seq_num < sock->window.next_seq_expected)
-      return 0;
+    if (seq_num < sock->window.next_seq_expected) return 0;
     /* ensure data would not require more space than the buffer size allows */
     /* while the window size can change, if the data does not contain any bytes
      * already ACKed, the window size is guaranteed to be at least as large as
      * what was advertised when the data was sent */
-    if((seq_num + payload_len - sock->window.next_seq_expected)
-        >= buf_len(&(sock->window.recv_win)))
+    if ((seq_num + payload_len - sock->window.next_seq_expected) >=
+        buf_len(&(sock->window.recv_win)))
       return 0;
   }
   return 1;
 }
 
+static int fast_recovery(cmu_socket_t *sock) {
+  int32_t cwin = sock->window.cwin;
 
-static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
+  int32_t ssthresh = sock->ssthresh;
+  int is_slow_start = cwin < ssthresh;
+  ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
+  
+  sock->window.cwin == ssthresh + (3 * MSS);
+
+  hdr_t *pkt_send = get_win_pkt(sock, 0);
+  if (pkt_send != NULL) {
+    set_ack(pkt_send, sock->window.next_seq_expected);
+    set_flags(pkt_send, ACK_FLAG_MASK);
+    send_pkt(sock, pkt_send);
+  }
+  uint8_t *fast_rec_ack = chk_recv_pkt(sock, TIMEOUT);
+  if (fast_rec_ack == NULL) {
+    ssthresh = cwin / 2;
+    cwin = MSS;
+    sock->ssthresh = ssthresh;
+    sock->window.cwin = cwin;
+    return 0;
+  }
+
+  if ((fast_rec_ack != NULL) && is_valid_recv(sock, fast_rec_ack)) {
+    int num_recv = on_recv_pkt(sock, fast_rec_ack);
+  }
+  return 0;
+}
+
+static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   uint32_t ack_num = get_ack(pkt);
   uint32_t adv_win = get_advertised_window(pkt);
 
-  /* validate */
-  int ack_valid = (ack_num <=
-      sock->window.last_ack_received + buf_len(&(sock->window.send_win)));
+  /* validate */  // is valid if it's in the range of the sending window
+  int ack_valid = (ack_num <= sock->window.last_ack_received +
+                                  buf_len(&(sock->window.send_win)));
   CHK_MSG("Error: Invalid ack number in received ACK packet", ack_valid);
-  if(ack_num < sock->window.last_ack_received)
+  if (ack_num < sock->window.last_ack_received) {
     return 0;
-  if(ack_num == sock->window.last_ack_received) {
+  }
+
+  if (ack_num == sock->window.last_ack_received) {
     // TODO (part of fast recovery)
   }
 
   int is_standalone = (get_payload_len(pkt) == 0);
-  sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
-    && is_standalone;
+  int is_dup_ack = (ack_num == sock->window.last_ack_received) && is_standalone;
+
+  sock->window.dup_ack_cnt += is_dup_ack;
+
+  // num_newly_acked bytes
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
+
   sock->window.last_ack_received = ack_num;
+
+  // new ack phase
+  if (num_newly_acked > 0) {
+    sock->window.dup_ack_cnt = 0;
+    int is_slow_start = sock->window.cwin < sock->ssthresh;
+
+    if (sock->is_fast_recovery == 1) {
+      sock->window.cwin = sock->ssthresh;
+      sock->is_fast_recovery = 0;
+    } else if (is_slow_start == 1) {
+        sock->window.cwin += MSS;
+      } else { // congestion avoidance
+        sock->window.cwin += (MSS * (MSS / sock->window.cwin));
+      }
+    
+  }
 
   /* shift the sending window */
   buf_pop(&(sock->window.send_win), NULL, num_newly_acked);
   sock->window.num_inflight -= num_newly_acked;
-  
+
   sock->window.adv_win = adv_win;
+  // dup ack (less than 3)
+  if (is_dup_ack == 1 && sock->window.dup_ack_cnt < 3) {
+    if (sock->is_fast_recovery == 1) {
+      sock->window.cwin += MSS;
+    }
+  }
+  if (sock->window.dup_ack_cnt == 3) {
+    if (sock->is_fast_recovery == 0) {
+      fast_recovery(sock);
+    } else {
+      sock->is_fast_recovery == 0;
+      sock->ssthresh = sock->window.cwin / 2;
+      sock->window.cwin = sock->ssthresh + (3 * MSS);
+    }
+  }
   return 0;
 }
-
 
 static void update_recv_win(cmu_socket_t *sock) {
   /* resize the recv window as necesssary so it and the received buffer
    * do not store more than MAX_NETWORK_BUFFER bytes combined */
   uint32_t old_winlen = buf_len(&(sock->window.recv_win));
-  while(pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
+  while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {
+  }
   uint32_t recv_buf_len = buf_len(&(sock->received_buf));
   pthread_mutex_unlock(&(sock->recv_lock));
   uint32_t new_winlen = MAX_NETWORK_BUFFER - recv_buf_len;
   buf_ensure_len(&(sock->window.recv_win), new_winlen);
   buf_ensure_len(&(sock->window.recv_mask), new_winlen);
   /* zero out any newly made space at the end */
-  for(uint32_t i = old_winlen; i < new_winlen; i++)
+  for (uint32_t i = old_winlen; i < new_winlen; i++)
     buf_set(&(sock->window.recv_mask), i, 0);
 }
-
 
 /**
  * @return -1 if error, 0 otherwise
  */
-static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
-    const uint8_t *payload, uint16_t payload_len) {
-  (void) dst;
+static int on_recv_data(cmu_socket_t *sock, uint16_t dst, uint32_t seq_num,
+                        const uint8_t *payload, uint16_t payload_len) {
+  (void)dst;
   /* ignore data if it has any bytes already ACKed */
-  if(seq_num < sock->window.next_seq_expected)
-    return 0;
+  if (seq_num < sock->window.next_seq_expected) return 0;
 
   uint32_t last_seqnum = seq_num + payload_len;
   CHK_MSG("Error: Received data which would exceed the network buffer",
-      last_seqnum - sock->window.next_seq_expected
-      < buf_len(&(sock->window.recv_win)))
+          last_seqnum - sock->window.next_seq_expected <
+              buf_len(&(sock->window.recv_win)))
 
   CHK(buf_get(&(sock->window.recv_mask), 0) == 0);
 
   /* check if data can be popped & added to the received buffer */
   int data_made_available_to_user = (seq_num == sock->window.next_seq_expected);
-  if(data_made_available_to_user) {
+  if (data_made_available_to_user) {
     /* get as much data as possible from the window, based on the recv mask */
     uint32_t pop_len = payload_len;
     uint32_t winlen = buf_len(&(sock->window.recv_win));
-    while((pop_len < winlen)
-        && (buf_get(&(sock->window.recv_mask), pop_len) > 0))
+    while ((pop_len < winlen) &&
+           (buf_get(&(sock->window.recv_mask), pop_len) > 0))
       ++pop_len;
     uint8_t *pop_data = NULL;
     CHK(buf_pop(&(sock->window.recv_win), &pop_data, pop_len) == pop_len);
     CHK(buf_pop(&(sock->window.recv_win), NULL, pop_len) == pop_len);
     memcpy(pop_data, payload, payload_len);
     sock->window.next_seq_expected += pop_len;
-    while(pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
+    while (pthread_mutex_lock(&(sock->recv_lock)) != 0) {
+    }
     buf_append(&(sock->received_buf), pop_data, pop_len);
     pthread_mutex_unlock(&(sock->recv_lock));
   }
 
   update_recv_win(sock);
 
-  if(!data_made_available_to_user) {
+  if (!data_made_available_to_user) {
     /* mark the recv buffer & recv mask */
     uint32_t buf_start = seq_num - sock->window.next_seq_expected;
     buf_ensure_len(&(sock->window.recv_win), payload_len);
-    for(uint32_t i = 0; i < payload_len; i++) {
+    for (uint32_t i = 0; i < payload_len; i++) {
       buf_set(&(sock->window.recv_mask), buf_start + i, 1);
       buf_set(&(sock->window.recv_win), buf_start + i, payload[i]);
     }
   }
 
-  if(data_made_available_to_user)
-    pthread_cond_signal(&(sock->wait_cond));
+  if (data_made_available_to_user) pthread_cond_signal(&(sock->wait_cond));
 
   return payload_len;
 }
 
-
 /**
- * Returns the amount of bytes of new data which was received which can fit in the window
+ * Returns the amount of bytes of new data which was received which can fit in
+ * the window
  */
 int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
   uint8_t flags = get_flags(pkt);
   uint16_t payload_len = get_payload_len(pkt);
-  if(flags & ACK_FLAG_MASK) {
+  if (flags & ACK_FLAG_MASK) {
     on_recv_ack(sock, pkt);
   }
-  
-  if(payload_len > 0) {
+
+  if (payload_len > 0) {
     uint32_t num_recv = on_recv_data(sock, get_dst(pkt), get_seq(pkt),
-        get_payload((uint8_t*)pkt), payload_len);
+                                     get_payload((uint8_t *)pkt), payload_len);
     CHK(num_recv)
     return payload_len;
   }
-  
+
   return 0;
 }
 
-
 /**
- * 
+ *
  * Checks if the socket received any data
  *
  * It first peeks at the header to figure out the length of the packet and then
  * reads the entire packet.
- * 
+ *
  * @param sock The socket used for receiving data on the connection.
  * @param flags Flags that determine how the socket should wait for data. Check
  *             `cmu_read_mode_t` for more information.
- * 
+ *
  */
-uint8_t* chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags) {
+uint8_t *chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags) {
   cmu_tcp_header_t hdr;
   uint8_t *pkt = NULL;
-  
+
   socklen_t conn_len = sizeof(sock->conn);
   ssize_t len = 0;
   uint32_t plen = 0, buf_size = 0, n = 0;
-  
+
   switch (flags) {
     case NO_FLAG:
       len = recvfrom(sock->socket, &hdr, sizeof(cmu_tcp_header_t), MSG_PEEK,
@@ -215,4 +276,3 @@ uint8_t* chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags) {
   }
   return pkt;
 }
-

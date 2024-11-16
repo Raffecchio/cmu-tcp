@@ -27,6 +27,7 @@
  *
  * @param in the socket to be used for backend processing.
  */
+ssize_t send_pkt(const cmu_socket_t *sock, cmu_tcp_header_t *pkt);
 void* begin_backend(void* in);
 
 uint8_t * chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags);

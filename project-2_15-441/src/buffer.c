@@ -18,8 +18,8 @@ int buf_get_data(const buf_t *buf, uint32_t i, uint8_t *data, uint32_t len) {
   if((buf->data == NULL) || (len == 0))
     return 0;
 
-  CHK_MSG("Error: cannot write to NULL data in buf_get_data", data != NULL)
-  CHK_MSG("Error: cannot read from large index in buf_get_data", i < buf->len)
+  CHK_MSG("Error: cannot write to NULL data in buf_get_data", data != NULL);
+  CHK_MSG("Error: cannot read from large index in buf_get_data", i < buf->len);
 
   if(buf->len < i + len)
     len = buf->len - i;
@@ -97,7 +97,7 @@ int buf_ensure_len(buf_t *buf, uint32_t len) {
 int buf_append(buf_t *buf, const uint8_t *data, uint32_t len) {
   if(len == 0)
     return 0;
-  CHK_MSG("Error: Invalid data ptr given in buf_append", data != NULL)
+  CHK_MSG("Error: Invalid data ptr given in buf_append", data != NULL);
   
   buf_ensure_len(buf, buf->len + len);
   memcpy(buf->data + buf->len - len, data, len);

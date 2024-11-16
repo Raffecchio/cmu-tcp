@@ -53,6 +53,7 @@ typedef struct {
   buf_t recv_mask;  // a mask to keep track of which bytes in the
                         // receive window were received
   // uint32_t recv_win_cap;  // current max window size (depends on received_buf)
+  uint32_t cwin;
 } window_t;
 
 // int init_window(window_t *window);
@@ -93,7 +94,8 @@ typedef struct {
   pthread_t thread_id;
   uint16_t my_port;
   struct sockaddr_in conn;
-  
+  int ssthresh;
+  int is_fast_recovery;
 } cmu_socket_t;
 
 /*
