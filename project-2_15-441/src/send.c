@@ -98,7 +98,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   struct timeval now;
   gettimeofday(&now, NULL);
   double elapsed_ms = (sock->window.last_send - now.tv_sec)*1000.0;
-  if((send_winlen > 0)
+  if((sock->window.num_inflight > 0)
       && ((sock->window.last_send < 0)
       || (elapsed_ms >= DEFAULT_TIMEOUT)
       || (sock->window.dup_ack_cnt >= 3))) {
