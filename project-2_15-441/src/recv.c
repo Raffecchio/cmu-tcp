@@ -51,18 +51,15 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   CHK_MSG("Error: Invalid ack number in received ACK packet", ack_valid);
   if(ack_num < sock->window.last_ack_received)
     return 0;
-  if(ack_num == sock->window.last_ack_received) {
-    // TODO (part of fast recovery)
-  }
 
   int is_standalone = (get_payload_len(pkt) == 0);
   sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
     && is_standalone;
-  uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
     sock->window.last_send = (double)-1;
   }
+  uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
   sock->window.last_ack_received = ack_num;
 
   /* shift the sending window */
