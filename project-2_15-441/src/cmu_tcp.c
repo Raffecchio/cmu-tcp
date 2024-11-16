@@ -278,19 +278,18 @@ int cmu_socket(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
 
 int cmu_close(cmu_socket_t *sock) {
+  if (sock != NULL) {
+  } else {
+    perror("ERROR null socket\n");
+    return EXIT_ERROR;
+  }
+
   while (pthread_mutex_lock(&(sock->death_lock)) != 0) {}
   sock->dying = 1;
   pthread_mutex_unlock(&(sock->death_lock));
 
   pthread_join(sock->thread_id, NULL);
 
-  if (sock != NULL) {
-    buf_free(&(sock->received_buf));
-    buf_free(&(sock->sending_buf));
-  } else {
-    perror("ERROR null socket\n");
-    return EXIT_ERROR;
-  }
   return close(sock->socket);
 }
 

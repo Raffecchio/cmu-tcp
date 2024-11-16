@@ -56,25 +56,24 @@ static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
     return 0;
   }
 
-  if (ack_num == sock->window.last_ack_received) {
-    // TODO (part of fast recovery)
-  }
-
   int is_standalone = (get_payload_len(pkt) == 0);
   int is_dup_ack = (ack_num == sock->window.last_ack_received) && is_standalone;
 
   sock->window.dup_ack_cnt += is_dup_ack;
+  if(ack_num > sock->window.last_ack_received) {
+    sock->window.dup_ack_cnt = 0;
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec;
+    cca_new_ack(sock);
+    // sock->window.last_send should be updated only when passes the num_inflight,
+    // in which case the code in send will do just that
+  }
 
-  // num_newly_acked bytes
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
 
   sock->window.last_ack_received = ack_num;
 
-  // New ack and its affect on each phase
-  if (num_newly_acked > 0) {
-    sock->window.dup_ack_cnt = 0;
-    cca_new_ack(sock);
-  }
 
   /* shift the sending window */
   buf_pop(&(sock->window.send_win), NULL, num_newly_acked);
