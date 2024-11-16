@@ -34,11 +34,8 @@ void functionality(cmu_socket_t *sock) {
   int n;
 
   (void)fp;
+  cmu_write(sock, "a", 1);
 
-  n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
-  printf("R: %s\n", buf);
-  printf("N: %d\n", n);
-  sleep(1);
 }
 
 int main() {

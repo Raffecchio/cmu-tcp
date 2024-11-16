@@ -28,6 +28,7 @@ void functionality(cmu_socket_t *sock) {
   int n;
   int read;
 
+  printf("testing server functionality starting!\n");
   // Wait to hear from an initiator
   n = 0;
   while (n == 0) {
@@ -56,6 +57,8 @@ int main() {
   char *serverip;
   char *serverport;
   cmu_socket_t socket;
+
+  printf("--------------------starting initiator!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
   serverip = getenv("server15441");
   if (!serverip) {

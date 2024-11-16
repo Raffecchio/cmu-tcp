@@ -55,12 +55,15 @@ def test_pcap_acks():
     for pkt in packets:
         if CMUTCP in pkt:
             # Ignore handshake packets, should test in a different test.
-            if pkt[CMUTCP].flags == 0:
-                payload_len = pkt[CMUTCP].plen - pkt[CMUTCP].hlen
+            payload_len = pkt[CMUTCP].plen - pkt[CMUTCP].hlen
+            # if pkt[CMUTCP].flags == 0:
+            if payload_len > 0:
                 expected_acks.append(pkt[CMUTCP].seq_num + payload_len)
             elif pkt[CMUTCP].flags == ACK_MASK:
                 ack_nums.append(pkt[CMUTCP].ack_num)
 
+    print("expected acks:", expected_acks)
+    print("acks given:", ack_nums)
     # Probably not the best way to do this test!
     if set(expected_acks) == set(ack_nums):
         print("Test Passed")
