@@ -57,6 +57,9 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     && is_standalone;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec;
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
   }
