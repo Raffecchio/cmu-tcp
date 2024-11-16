@@ -29,9 +29,7 @@ void cca_dup_ack(cmu_socket_t *sock) {
   } else {
     // Treat transition as timeout to slow start
     // cca_enter_ss_from_timeout(sock);
-    if (sock->is_fast_recovery == 1) {
       sock->window.cwin += MSS;
-    }
   }
   return;
 }
