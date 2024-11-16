@@ -190,6 +190,9 @@ static int passive_connect(cmu_socket_t *sock) {
     if (flags != SYN_FLAG_MASK)
       continue;
     while (1) {
+      sock->window.next_seq_expected = seq_syn_recv + 1;
+      sock->window.last_seq_received = sock->window.next_seq_expected - 1;
+      
       // SYN_ACKING - SYN_FLAG_MASK
       size_t conn_len = sizeof(sock->conn);
       uint16_t payload_len = 0;
@@ -201,7 +204,8 @@ static int passive_connect(cmu_socket_t *sock) {
       srand(tv.tv_usec + 117);
       uint32_t seq_syn_ack_sent = rand();
       printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
-      uint32_t ack = seq_syn_recv + 1;
+      // uint32_t ack = seq_syn_recv + 1;
+      uint32_t ack = sock->window.next_seq_expected;
       uint16_t hlen = sizeof(cmu_tcp_header_t);
       uint16_t plen = hlen + payload_len;
       uint8_t flags = (SYN_FLAG_MASK | ACK_FLAG_MASK);
@@ -228,8 +232,6 @@ static int passive_connect(cmu_socket_t *sock) {
       }
 
       sock->window.last_ack_received = get_ack(hdr_two);
-      sock->window.next_seq_expected = get_seq(hdr_two) + 1;
-      sock->window.last_seq_received = get_seq(hdr_two);
       sock->window.adv_win = get_advertised_window(hdr_two);
       free(pkt_ack_recv);
       return 0;
