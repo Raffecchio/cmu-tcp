@@ -24,7 +24,7 @@ void cca_dup_ack_cnt_three(cmu_socket_t *sock) {
         int is_slow_start = cwin < ssthresh;
         ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
         sock->window.cwin = ssthresh + (3 * MSS);
-        // fast_recovery(sock);
+        fast_recovery(sock);
     } else {
       // Treat transition as timeout to slow start
       cca_enter_ss_from_timeout(sock);
@@ -60,15 +60,18 @@ void fast_recovery(cmu_socket_t *sock) {
     set_flags(pkt_send, ACK_FLAG_MASK);
     send_pkt(sock, pkt_send);
   }
-  uint8_t *fast_rec_ack = chk_recv_pkt(sock, TIMEOUT);
-  if (fast_rec_ack == NULL) {
+  uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
+  if (fast_rec_ack_pkt == NULL) {
     // transitions to slow start 
     cca_enter_ss_from_timeout(sock);
     return;
   }
 
-  if ((fast_rec_ack != NULL) && is_valid_recv(sock, fast_rec_ack)) {
-    on_recv_pkt(sock, fast_rec_ack);
+  // uint32_t ack_num = get_ack(fast_rec_ack_pkt);
+
+
+  if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, fast_rec_ack_pkt)) {
+    on_recv_pkt(sock, fast_rec_ack_pkt);
   }
   return;
 }
