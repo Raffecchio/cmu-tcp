@@ -13,8 +13,8 @@
 #include "send.h"
 #include "backend.h"
 #include "error.h"
+#include "cca.h"
 
-typedef cmu_tcp_header_t hdr_t;
 static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -42,42 +42,6 @@ int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
       return 0;
   }
   return 1;
-}
-
-static int fast_recovery(cmu_socket_t *sock) {
-  sock->is_fast_recovery = 1;
-  hdr_t *pkt_send = get_win_pkt(sock, 0);
-  if (pkt_send != NULL) {
-    set_ack(pkt_send, sock->window.next_seq_expected);
-    set_flags(pkt_send, ACK_FLAG_MASK);
-    send_pkt(sock, pkt_send);
-  }
-  uint8_t *fast_rec_ack = chk_recv_pkt(sock, TIMEOUT);
-  if (fast_rec_ack == NULL) {
-    // transitions to slow start 
-    sock->is_fast_recovery = 0;
-    sock->ssthresh = sock->window.cwin / 2;
-    sock->window.cwin = MSS;
-    return 0;
-  }
-
-  if ((fast_rec_ack != NULL) && is_valid_recv(sock, fast_rec_ack)) {
-    on_recv_pkt(sock, fast_rec_ack);
-  }
-  return 0;
-}
-
-static void new_ack_phase(cmu_socket_t *sock) {
-  sock->window.dup_ack_cnt = 0;
-    int is_slow_start = sock->window.cwin < sock->ssthresh;
-    if (sock->is_fast_recovery == 1) {
-      sock->window.cwin = sock->ssthresh;
-      sock->is_fast_recovery = 0;
-    } else if (is_slow_start == 1) {
-        sock->window.cwin += MSS;
-      } else { // congestion avoidance
-        sock->window.cwin += (MSS * (MSS / sock->window.cwin));
-      }
 }
 
 static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
@@ -108,35 +72,21 @@ static int on_recv_ack(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
 
   // New ack and its affect on each phase
   if (num_newly_acked > 0) {
-    new_ack_phase(sock);
+    sock->window.dup_ack_cnt = 0;
+    cca_new_ack(sock);
   }
 
   /* shift the sending window */
   buf_pop(&(sock->window.send_win), NULL, num_newly_acked);
   sock->window.num_inflight -= num_newly_acked;
-
   sock->window.adv_win = adv_win;
   
   // Take appropriate action for dup ack < 3
   if (is_dup_ack == 1 && sock->window.dup_ack_cnt < 3) {
-    if (sock->is_fast_recovery == 1) {
-      sock->window.cwin += MSS;
-    }
+    cca_dup_ack_lt_three(sock);
   }
-  if (sock->window.dup_ack_cnt == 3) {
-    if (sock->is_fast_recovery == 0) {
-        int32_t cwin = sock->window.cwin;
-        int32_t ssthresh = sock->ssthresh;
-        int is_slow_start = cwin < ssthresh;
-        ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
-        sock->window.cwin = ssthresh + (3 * MSS);
-        fast_recovery(sock);
-    } else {
-      // Transition slow start
-      sock->is_fast_recovery = 0;
-      sock->ssthresh = sock->window.cwin / 2;
-      sock->window.cwin = sock->ssthresh + (3 * MSS);
-    }
+  if (is_dup_ack == 1 && sock->window.dup_ack_cnt == 3) {
+    cca_dup_ack_cnt_three(sock);
   }
   return 0;
 }
