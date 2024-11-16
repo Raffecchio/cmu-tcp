@@ -57,7 +57,8 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     && is_standalone;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
-    sock->window.last_send = (double)-1;
+    // sock->window.last_send should be updated only when passes the num_inflight,
+    // in which case the code in send will do just that
   }
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
   sock->window.last_ack_received = ack_num;
