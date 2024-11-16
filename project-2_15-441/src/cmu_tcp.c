@@ -29,7 +29,6 @@
 #include "buffer.h"
 
 
-
 int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
     const int port, const char *server_ip) {
   CHK_MSG("ERROR server_ip NULL", server_ip != NULL)
@@ -56,6 +55,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->window.last_ack_received = 0;
   sock->window.num_inflight = 0;
   sock->window.dup_ack_cnt = 0;
+  sock->window.cwin = WINDOW_INITIAL_WINDOW_SIZE;
   buf_init(&(sock->window.recv_win));
   buf_ensure_len(&(sock->window.recv_win), MAX_NETWORK_BUFFER);
   sock->window.next_seq_expected = 0;
@@ -71,6 +71,8 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->conn.sin_family = AF_INET;
   sock->my_port = (uint16_t)port;
   sock->conn.sin_port = htons((uint16_t)port);
+  sock->ssthresh = 64000;
+  sock->is_fast_recovery = 0;
   CHK_MSG("ERROR opening socket", sock->socket);
   switch (socket_type) {
     case TCP_INITIATOR:
