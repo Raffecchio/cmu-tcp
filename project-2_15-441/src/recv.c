@@ -18,12 +18,12 @@
 int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
   // TODO (?)
   (void)pkt;
-  if(get_flags(pkt) < 3 || get_flags(pkt) > 5)
-    return 0;
-  if(get_dst(pkt) != 15441)
-    return 0;
-  if(get_hlen(pkt) != sizeof(cmu_tcp_header_t))
-    return 0;
+  // if(get_flags(pkt) < 3 || get_flags(pkt) > 5)
+  //   return 0;
+  // if(get_dst(pkt) != 15441)
+  //   return 0;
+  // if(get_hlen(pkt) != sizeof(cmu_tcp_header_t))
+  //   return 0;
   uint32_t payload_len = get_payload_len(pkt);
   if(payload_len > 0) {
     uint32_t seq_num = get_seq(pkt);

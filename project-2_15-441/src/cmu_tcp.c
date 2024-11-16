@@ -205,7 +205,7 @@ static int passive_connect(cmu_socket_t *sock) {
       struct timeval tv;
       gettimeofday(&tv,NULL);
       srand(tv.tv_usec + 117);
-      uint32_t seq_syn_ack_sent = rand();
+      uint32_t seq_syn_ack_sent = 302; // rand();
       printf("SERVER orig seq sent to client %d\n", seq_syn_ack_sent);
       // uint32_t ack = seq_syn_recv + 1;
       uint32_t ack = sock->window.next_seq_expected;
@@ -227,9 +227,11 @@ static int passive_connect(cmu_socket_t *sock) {
         continue;
       cmu_tcp_header_t *hdr_two = (cmu_tcp_header_t *)pkt_ack_recv;
       int syn_ack_acked = (get_ack(hdr_two) == (seq_syn_ack_sent + 1));
+      int seq_correct = (get_seq(hdr_two) == sock->window.next_seq_expected);
       if ((get_flags(hdr_two) != ACK_FLAG_MASK)
           || !syn_ack_acked
-          || (get_plen(hdr_two) != hlen)) {
+          || (get_plen(hdr_two) != hlen)
+          || !seq_correct) {
         free(pkt_ack_recv);
         continue;
       }
