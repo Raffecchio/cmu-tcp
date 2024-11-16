@@ -71,7 +71,7 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
   sock->conn.sin_family = AF_INET;
   sock->my_port = (uint16_t)port;
   sock->conn.sin_port = htons((uint16_t)port);
-  sock->ssthresh = 64000;
+  sock->ssthresh = WINDOW_INITIAL_SSTHRESH;
   sock->is_fast_recovery = 0;
   CHK_MSG("ERROR opening socket", sock->socket);
   switch (socket_type) {
