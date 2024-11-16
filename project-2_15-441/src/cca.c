@@ -55,10 +55,13 @@ void fast_recovery(cmu_socket_t *sock) {
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
 
-  sock->window.num_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
+  int new_inflight  = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
   struct timeval now;
   gettimeofday(&now, NULL);
-  sock->window.last_send = now.tv_sec;
+  if(new_inflight > sock->window.num_inflight) {
+    sock->window.last_send = now.tv_sec;
+  }
+  sock->window.num_inflight = new_inflight;
 
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
