@@ -30,8 +30,8 @@ void cca_dup_ack(cmu_socket_t *sock) {
       fast_recovery(sock);
     
   } else {
-    // Treat transition as timeout to slow start
-    // cca_enter_ss_from_timeout(sock);
+    // follwing chart that for fast recovery we just increment 
+    // (until when? I asked alexis + Darshil waiting for response)
       sock->window.cwin += MSS;
   }
   return;
@@ -51,22 +51,21 @@ void cca_new_ack(cmu_socket_t *sock) {
 }
 
 void fast_recovery(cmu_socket_t *sock) {
-    struct timeval now;
-  gettimeofday(&now, NULL);
+    
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
 
   sock->window.num_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
-
+  struct timeval now;
   gettimeofday(&now, NULL);
   sock->window.last_send = now.tv_sec;
-  sock->window.dup_ack_cnt = 0;
 
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
     set_flags(pkt_send, ACK_FLAG_MASK);
     send_pkt(sock, pkt_send);
   }
+  
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
   if (fast_rec_ack_pkt == NULL) {
     // transitions to slow start
