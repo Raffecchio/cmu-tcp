@@ -41,9 +41,8 @@ static int fast_recovery(cmu_socket_t *sock) {
   int32_t ssthresh = sock->ssthresh;
   int is_slow_start = cwin < ssthresh;
   ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
-  
   sock->window.cwin == ssthresh + (3 * MSS);
-
+  sock->is_fast_recovery = 1;
   hdr_t *pkt_send = get_win_pkt(sock, 0);
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
@@ -52,6 +51,7 @@ static int fast_recovery(cmu_socket_t *sock) {
   }
   uint8_t *fast_rec_ack = chk_recv_pkt(sock, TIMEOUT);
   if (fast_rec_ack == NULL) {
+    sock->is_fast_recovery = 0;
     ssthresh = cwin / 2;
     cwin = MSS;
     sock->ssthresh = ssthresh;
