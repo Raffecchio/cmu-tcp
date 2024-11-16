@@ -48,8 +48,17 @@ void cca_new_ack(cmu_socket_t *sock) {
 }
 
 void fast_recovery(cmu_socket_t *sock) {
+    struct timeval now;
+  gettimeofday(&now, NULL);
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
+
+  sock->window.num_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
+
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec;
+    sock->window.dup_ack_cnt = 0;
+
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
     set_flags(pkt_send, ACK_FLAG_MASK);
