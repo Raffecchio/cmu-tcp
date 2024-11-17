@@ -70,7 +70,9 @@ void fast_recovery(cmu_socket_t *sock) {
   }
   
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
+  // Confirm this is how to check for timeout?
   if (fast_rec_ack_pkt == NULL) {
+    printf("def timeout\n");
     cca_enter_ss_from_timeout(sock);
     return;
   }
@@ -80,7 +82,7 @@ void fast_recovery(cmu_socket_t *sock) {
   return;
 }
 
-void cca_enter_ss_from_timeout(cmu_socket_t *sock) {
+void c(cmu_socket_t *sock) {
   sock->is_fast_recovery = 0;
   sock->ssthresh = sock->window.cwin / 2;
   sock->window.cwin = MSS;
