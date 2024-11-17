@@ -121,10 +121,6 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
     return pkt;
   }
 
-  if((sock->window.dup_ack_cnt >= 3) && sock->is_fast_recovery == 1) {
-     cca_dup_ack(sock);
-  }
-
   // if(timeout || sock->window.dup_ack_cnt >= 3) {
   // // if((sock->window.num_inflight > 0)
   // //     && (sock->window.last_send >= 0)

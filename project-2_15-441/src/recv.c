@@ -73,7 +73,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   buf_pop(&(sock->window.send_win), NULL, num_newly_acked);
   sock->window.num_inflight -= num_newly_acked;
   sock->window.adv_win = adv_win;
-  if(is_dup_ack == 1 && sock->window.dup_ack_cnt >= 3) {
+  if(is_dup_ack == 1 && sock->is_fast_recovery == 1 && sock->window.dup_ack_cnt >= 3) {
     cca_dup_ack(sock);
   }
   return 0;
