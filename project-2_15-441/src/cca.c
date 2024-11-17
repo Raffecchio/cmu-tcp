@@ -27,7 +27,7 @@ void cca_dup_ack(cmu_socket_t *sock) {
       ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
       sock->window.cwin = ssthresh + (3 * MSS);
       sock->is_fast_recovery = 1;
-      fast_retransmit(sock);
+      // fast_retransmit(sock);
     
   } else {
       sock->window.cwin += MSS;
