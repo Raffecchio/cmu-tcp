@@ -67,6 +67,8 @@ void fast_retransmit(cmu_socket_t *sock) {
   
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
   if (fast_rec_ack_pkt == NULL) {
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec;
     cca_enter_ss_from_timeout(sock);
     return;
   }
