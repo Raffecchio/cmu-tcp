@@ -36,6 +36,7 @@ void cca_dup_ack(cmu_socket_t *sock) {
 }
 
 void cca_new_ack(cmu_socket_t *sock) {
+  sock->window.dup_ack_cnt = 0;
   int is_slow_start = sock->window.cwin < sock->ssthresh;
   if (sock->is_fast_recovery == 1) {
     sock->window.cwin = sock->ssthresh;
