@@ -60,8 +60,8 @@ void fast_retransmit(cmu_socket_t *sock) {
   sock->window.last_send = now.tv_sec;
 
   if (pkt_send != NULL) {
-    set_ack(pkt_send, sock->window.next_seq_expected);
-    set_flags(pkt_send, ACK_FLAG_MASK);
+    // set_ack(pkt_send, sock->window.next_seq_expected);
+    // set_flags(pkt_send, ACK_FLAG_MASK);
     send_pkt(sock, pkt_send);
   }
   
