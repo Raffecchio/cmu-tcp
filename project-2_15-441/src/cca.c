@@ -28,6 +28,7 @@ void cca_dup_ack(cmu_socket_t *sock) {
       ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
       sock->window.cwin = ssthresh + (3 * MSS);
       // fast_recovery(sock);
+      sock->is_fast_recovery = 1;
     
   } else {
     // follwing chart that for fast recovery we just increment 
