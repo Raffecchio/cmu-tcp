@@ -16,7 +16,6 @@
 #include "recv.h"
 #include "send.h"
 
-
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 void cca_dup_ack(cmu_socket_t *sock) {
@@ -55,10 +54,6 @@ void fast_retransmit(cmu_socket_t *sock) {
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
 
-  struct timeval now;
-  gettimeofday(&now, NULL);
-  sock->window.last_send = now.tv_sec;
-
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
     set_flags(pkt_send, ACK_FLAG_MASK);
@@ -67,11 +62,15 @@ void fast_retransmit(cmu_socket_t *sock) {
   
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
   if (fast_rec_ack_pkt == NULL) {
-    gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_sec;
+    // do I reset the timeout here? i think yes otherwise there will be another immediately to the same effect
     cca_enter_ss_from_timeout(sock);
+    // this should retransmit now...
     return;
-  }
+  } 
+  struct timeval now;
+  gettimeofday(&now, NULL);
+
+  sock->window.last_send = now.tv_sec;
   if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, (cmu_tcp_header_t*) fast_rec_ack_pkt)) {
     on_recv_pkt(sock, (cmu_tcp_header_t*) fast_rec_ack_pkt);
   }

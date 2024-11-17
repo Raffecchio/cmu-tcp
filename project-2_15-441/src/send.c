@@ -123,9 +123,9 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
     hdr_t *pkt = get_win_pkt(sock, num_inflight);
     if (num_inflight == 0) {
       gettimeofday(&now, NULL);
+      sock->window.last_send = now.tv_sec;
       sock->window.dup_ack_cnt = 0;
     }
-    sock->window.last_send = now.tv_sec;
     sock->window.num_inflight += get_payload_len(pkt);
     return pkt;
   }
