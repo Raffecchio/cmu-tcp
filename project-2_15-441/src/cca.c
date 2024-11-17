@@ -70,8 +70,8 @@ void fast_retransmit(cmu_socket_t *sock) {
     cca_enter_ss_from_timeout(sock);
     return;
   }
-  if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, fast_rec_ack_pkt)) {
-    on_recv_pkt(sock, fast_rec_ack_pkt);
+  if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, (cmu_tcp_header_t*) fast_rec_ack_pkt)) {
+    on_recv_pkt(sock, (cmu_tcp_header_t*) fast_rec_ack_pkt);
   }
   return;
 }
