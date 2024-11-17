@@ -103,7 +103,7 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
   double elapsed_ms = (now.tv_sec - sock->window.last_send) * 1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
 
-  if (timeout || (sock->window.dup_ack_cnt == 3)) {
+  if (timeout) {
     printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight =
@@ -112,10 +112,7 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
 
-    if (timeout && (sock->window.dup_ack_cnt != 3)) {
-      sock->window.dup_ack_cnt = 0;
-      cca_enter_ss_from_timeout(sock);
-    }
+    sock->window.dup_ack_cnt = 0;
     return pkt;
   }
 

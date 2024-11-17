@@ -28,6 +28,7 @@ void cca_dup_ack(cmu_socket_t *sock) {
       ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
       sock->window.cwin = ssthresh + (3 * MSS);
       sock->is_fast_recovery = 1;
+      fast_recovery(sock);
     
   } else {
       sock->window.cwin += MSS;
@@ -49,38 +50,35 @@ void cca_new_ack(cmu_socket_t *sock) {
   return;
 }
 
-// void fast_recovery(cmu_socket_t *sock) {
+void fast_recovery(cmu_socket_t *sock) {
     
-//   sock->is_fast_recovery = 1;
-//   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
+  sock->is_fast_recovery = 1;
+  cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
 
-//   int new_inflight  = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
-//   struct timeval now;
-//   gettimeofday(&now, NULL);
-//   if(new_inflight > sock->window.num_inflight) {
-//     sock->window.last_send = now.tv_sec;
-//   }
-//   sock->window.num_inflight = new_inflight;
+  int new_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
+  struct timeval now;
+  gettimeofday(&now, NULL);
+  if(new_inflight > sock->window.num_inflight) {
+    sock->window.last_send = now.tv_sec;
+  }
+  sock->window.num_inflight = new_inflight;
 
-//   if (pkt_send != NULL) {
-//     set_ack(pkt_send, sock->window.next_seq_expected);
-//     set_flags(pkt_send, ACK_FLAG_MASK);
-//     send_pkt(sock, pkt_send);
-//   }
+  if (pkt_send != NULL) {
+    set_ack(pkt_send, sock->window.next_seq_expected);
+    set_flags(pkt_send, ACK_FLAG_MASK);
+    send_pkt(sock, pkt_send);
+  }
   
-//   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
-//   if (fast_rec_ack_pkt == NULL) {
-//     cca_enter_ss_from_timeout(sock);
-//     return;
-//   }
-
-//   // uint32_t ack_num = get_ack(fast_rec_ack_pkt);
-
-//   if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, fast_rec_ack_pkt)) {
-//     on_recv_pkt(sock, fast_rec_ack_pkt);
-//   }
-//   return;
-// }
+  uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
+  if (fast_rec_ack_pkt == NULL) {
+    cca_enter_ss_from_timeout(sock);
+    return;
+  }
+  if ((fast_rec_ack_pkt != NULL) && is_valid_recv(sock, fast_rec_ack_pkt)) {
+    on_recv_pkt(sock, fast_rec_ack_pkt);
+  }
+  return;
+}
 
 void cca_enter_ss_from_timeout(cmu_socket_t *sock) {
   sock->is_fast_recovery = 0;
