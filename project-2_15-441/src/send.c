@@ -109,7 +109,6 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
     printf("timeout!\n");
     if(sock->window.dup_ack_cnt >= 3 && (sock->is_fast_recovery == 0)) {
       sock->is_fast_recovery = 1;
-      printf("dup acking for retransmit...here\n");
     }
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight =
