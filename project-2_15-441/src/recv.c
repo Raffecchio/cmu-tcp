@@ -57,10 +57,10 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   int is_dup_ack = (ack_num == sock->window.last_ack_received) && is_standalone;
   sock->window.dup_ack_cnt += is_dup_ack;
   if(ack_num > sock->window.last_ack_received) {
-    // I commented this out because it wasn't clear to me why this was here;
-    // struct timeval now;
-    // gettimeofday(&now, NULL);
-    // sock->window.last_send = now.tv_sec; 
+    // Not 100% clear to me why we update last_send here;
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec; 
     cca_new_ack(sock);
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
