@@ -104,7 +104,8 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
   if(timeout) {
     cca_enter_ss_from_timeout(sock);
   }  
-
+  fill_send_win(sock);
+  uint32_t send_winlen = buf_len(&(sock->window.send_win));
   if (timeout) {
     printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
@@ -116,8 +117,7 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
     
     return pkt;
   }
-    fill_send_win(sock);
-  uint32_t send_winlen = buf_len(&(sock->window.send_win));
+
 
 
   // if(timeout || sock->window.dup_ack_cnt >= 3) {
