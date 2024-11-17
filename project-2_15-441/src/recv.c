@@ -58,9 +58,9 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   sock->window.dup_ack_cnt += is_dup_ack;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_sec;
+    // struct timeval now;
+    // gettimeofday(&now, NULL);
+    // sock->window.last_send = now.tv_sec;
     cca_new_ack(sock);
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
