@@ -102,7 +102,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   gettimeofday(&now, NULL);
   double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
-  // do I change thresholds before or after retransmit? (before) 
+  
   if(timeout || (sock->window.dup_ack_cnt == 3)) {
     printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
