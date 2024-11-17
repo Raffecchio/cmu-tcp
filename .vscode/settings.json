@@ -2,6 +2,7 @@
     "files.associations": {
         "cmu_packet.h": "c",
         "types.h": "c",
-        "recv.h": "c"
+        "recv.h": "c",
+        "cmu_tcp.h": "c"
     }
 }

@@ -102,8 +102,8 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   gettimeofday(&now, NULL);
   double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
-
-  if(timeout || ((sock->window.dup_ack_cnt >= 3) && sock->is_fast_recovery == 0)) {
+  // do I change thresholds before or after retransmit? (before) 
+  if(timeout || (sock->window.dup_ack_cnt == 3)) {
     printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight = MAX(get_payload_len(pkt),
@@ -112,11 +112,9 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
 
-    if(timeout) {
+    if(timeout && (sock->window.dup_ack_cnt != 3)) {
       sock->window.dup_ack_cnt = 0;
       cca_enter_ss_from_timeout(sock);
-    } else {
-      cca_dup_ack(sock);
     }
     return pkt;
   }
