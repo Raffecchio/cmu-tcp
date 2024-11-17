@@ -53,13 +53,12 @@ void cca_new_ack(cmu_socket_t *sock) {
 void fast_retransmit(cmu_socket_t *sock) {
     
   sock->is_fast_recovery = 1;
-  fill_send_win(sock);
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
 
   struct timeval now;
   gettimeofday(&now, NULL);
   sock->window.last_send = now.tv_sec;
-    
+
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
     set_flags(pkt_send, ACK_FLAG_MASK);
