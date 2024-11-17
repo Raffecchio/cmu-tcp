@@ -103,7 +103,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
 
-  if(timeout || (sock->window.dup_ack_cnt >= 3)) {
+  if(timeout || ((sock->window.dup_ack_cnt >= 3) && sock->is_fast_recovery == 0)) {
     printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight = MAX(get_payload_len(pkt),
@@ -120,6 +120,11 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
     }
     return pkt;
   }
+
+  if((sock->window.dup_ack_cnt >= 3) && sock->is_fast_recovery == 1) {
+     cca_dup_ack(sock);
+  }
+
   // if(timeout || sock->window.dup_ack_cnt >= 3) {
   // // if((sock->window.num_inflight > 0)
   // //     && (sock->window.last_send >= 0)
