@@ -53,9 +53,10 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   if(ack_num < sock->window.last_ack_received)
     return 0;
 
-  int is_standalone = (get_payload_len(pkt) == 0);
-  int is_dup_ack = (ack_num == sock->window.last_ack_received) && is_standalone;
+  // int is_standalone = (get_payload_len(pkt) == 0);
+  int is_dup_ack = (ack_num == sock->window.last_ack_received);
   sock->window.dup_ack_cnt += is_dup_ack;
+  
   if(ack_num > sock->window.last_ack_received) {
     // Not 100% clear to me why we update last_send here;
     struct timeval now;
@@ -73,6 +74,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   sock->window.num_inflight -= num_newly_acked;
   sock->window.adv_win = adv_win;
   if(is_dup_ack == 1 && (sock->window.dup_ack_cnt >= 3)) {
+    printf("dup_ack_3\n");
     cca_dup_ack(sock);
   }
   return 0;
