@@ -51,7 +51,7 @@ void cca_new_ack(cmu_socket_t *sock) {
 }
 
 void fast_recovery(cmu_socket_t *sock) {
-    
+  fill_send_win(sock);
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
   // num_inflight should not change since we are retransmitting something unacked
@@ -83,7 +83,7 @@ void fast_recovery(cmu_socket_t *sock) {
 }
 
 void cca_enter_ss_from_timeout(cmu_socket_t *sock) {
-  // sock->window.dup_ack_cnt = 0;
+  sock->window.dup_ack_cnt = 0;
   sock->is_fast_recovery = 0;
   sock->ssthresh = sock->window.cwin / 2;
   sock->window.cwin = MSS;
