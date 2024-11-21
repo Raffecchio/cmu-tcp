@@ -9,6 +9,7 @@
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
 
+int fill_send_win(cmu_socket_t *sock);
 cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i);
 int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt);
 cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock);

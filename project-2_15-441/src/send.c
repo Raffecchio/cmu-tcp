@@ -18,7 +18,7 @@
 typedef cmu_tcp_header_t hdr_t;
 
 /* adds any available bytes to the send window from the sending buffer */
-static int fill_send_win(cmu_socket_t *sock) {
+int fill_send_win(cmu_socket_t *sock) {
   uint32_t send_winlen = buf_len(&(sock->window.send_win));
   uint32_t winlen_limit = MIN(sock->window.adv_win, sock->window.cwin);
   if (send_winlen >= winlen_limit) {
