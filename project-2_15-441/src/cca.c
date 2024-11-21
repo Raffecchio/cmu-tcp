@@ -58,9 +58,9 @@ void fast_recovery(cmu_socket_t *sock) {
   int new_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
   struct timeval now;
   gettimeofday(&now, NULL);
-  if(new_inflight > sock->window.num_inflight) {
-    sock->window.last_send = now.tv_sec;
-  }
+  // if(new_inflight > sock->window.num_inflight) {
+  sock->window.last_send = now.tv_sec;
+  // }
   sock->window.num_inflight = new_inflight;
 
   if (pkt_send != NULL) {
