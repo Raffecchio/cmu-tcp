@@ -83,6 +83,7 @@ void fast_recovery(cmu_socket_t *sock) {
 }
 
 void cca_enter_ss_from_timeout(cmu_socket_t *sock) {
+  sock->window.dup_ack_cnt = 0;
   sock->is_fast_recovery = 0;
   sock->ssthresh = sock->window.cwin / 2;
   sock->window.cwin = MSS;
