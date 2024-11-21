@@ -54,10 +54,13 @@ void fast_recovery(cmu_socket_t *sock) {
   fill_send_win(sock);
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
+  // Note: 
   // num_inflight should not change since we are retransmitting something unacked
   // int new_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
   struct timeval now;
   gettimeofday(&now, NULL);
+
+  // Note: should always update the last_send
   // if(new_inflight > sock->window.num_inflight) {
   sock->window.last_send = now.tv_sec;
   // }
@@ -72,7 +75,6 @@ void fast_recovery(cmu_socket_t *sock) {
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
   // Confirm this is how to check for timeout?
   if (fast_rec_ack_pkt == NULL) {
-    printf("def timeout\n");
     cca_enter_ss_from_timeout(sock);
     return;
   }

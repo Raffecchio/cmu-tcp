@@ -207,7 +207,6 @@ uint8_t* chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags) {
       ack_fd.events = POLLIN;
       // Timeout after DEFAULT_TIMEOUT.
       if (poll(&ack_fd, 1, DEFAULT_TIMEOUT) <= 0) {
-        printf("timeout from chk_recv_pkt\n");
         break;
       }
     }
