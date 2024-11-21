@@ -11,7 +11,7 @@
 #include "cmu_tcp.h"
 
 
-void cca_dup_ack(cmu_socket_t *sock);
+void cca_dup_ack_3(cmu_socket_t *sock);
 void cca_new_ack(cmu_socket_t *sock);
 void fast_recovery(cmu_socket_t *sock);
 void cca_enter_ss_from_timeout(cmu_socket_t *sock);

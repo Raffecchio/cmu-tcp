@@ -19,13 +19,13 @@
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-void cca_dup_ack(cmu_socket_t *sock) {
+void cca_dup_ack_3(cmu_socket_t *sock) {
   if (sock->is_fast_recovery == 0) {
     
       int32_t cwin = sock->window.cwin;
       int32_t ssthresh = sock->ssthresh;
       int is_slow_start = cwin < ssthresh;
-      ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
+      ssthresh = cwin * .5;
       sock->window.cwin = ssthresh + (3 * MSS);
       sock->is_fast_recovery = 1;
       fast_recovery(sock); 
@@ -55,16 +55,13 @@ void fast_recovery(cmu_socket_t *sock) {
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
   // Note: 
-  // num_inflight should not change since we are retransmitting something unacked
+  // num_inflight should not change since we are retransmitting something unacked/blocking the sending window
   // int new_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
   struct timeval now;
   gettimeofday(&now, NULL);
 
   // Note: should always update the last_send
-  // if(new_inflight > sock->window.num_inflight) {
   sock->window.last_send = now.tv_sec;
-  // }
-  // sock->window.num_inflight = new_inflight;
 
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
