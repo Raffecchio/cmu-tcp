@@ -99,7 +99,8 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   /* check timeout & resend leftmost window bytes if so */
   struct timeval now;
   gettimeofday(&now, NULL);
-  double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
+  double elapsed_ms = ((double)(now.tv_usec - sock->window.last_send))
+    /(double)1000;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
   if(timeout || (sock->window.dup_ack_cnt >= 3)) {
     hdr_t *pkt = get_win_pkt(sock, 0);
@@ -107,7 +108,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
         sock->window.num_inflight);
 
     gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_sec;
+    sock->window.last_send = now.tv_usec;
     sock->window.dup_ack_cnt = 0;
     return pkt;
   }
@@ -118,7 +119,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
     hdr_t *pkt = get_win_pkt(sock, num_inflight);
     if(num_inflight == 0) {
       gettimeofday(&now, NULL);
-      sock->window.last_send = now.tv_sec;
+      sock->window.last_send = now.tv_usec;
       sock->window.dup_ack_cnt = 0;
     }
     sock->window.num_inflight += get_payload_len(pkt);
