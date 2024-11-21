@@ -23,12 +23,12 @@ server: $(OBJS) $(SRC_DIR)/server.c
 client: $(OBJS) $(SRC_DIR)/client.c
 	$(CC) $(FLAGS) $(SRC_DIR)/client.c -o client $(OBJS)
 
-tests/testing_%: $(OBJS) tests/testing_%.c
+tests/testing_%: tests/testing_%.c $(OBJS) 
 	$(CC) $(FLAGS) $@.c -o $@ $(OBJS)
 
 
 tests/test_%: $(TEST_SRC_DIR)/test_%.c $(OBJS) 
-	$(CC) $(FLAGS) $@ -o $@ $< $(OBJS)
+	$(CC) $(FLAGS) $@.c -o $@ $(OBJS)
 testing: $(TESTS)
 
 
