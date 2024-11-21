@@ -64,9 +64,9 @@ void die_if_needed(cmu_socket_t *sock) {
   // guaranteed to not add any more data to the sending buffer, so no need
   // to get a lock here
   if ((buf_len(&(sock->sending_buf)) > 0)
-      || (buf_len(&(sock->received_buf)) > 0)
-      || (buf_len(&(sock->window.send_win)) > 0)
-      || (sock->window.last_seq_received > sock->window.next_seq_expected))
+      // || (buf_len(&(sock->received_buf)) > 0)
+      || (sock->window.last_seq_received >= sock->window.next_seq_expected)
+      || (buf_len(&(sock->window.send_win)) > 0))
     return;
   pthread_exit(NULL);
 }

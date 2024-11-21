@@ -12,7 +12,7 @@ TEST_BUILD_DIR = $(TOP_DIR)/build_test
 TESTS = tests/test_buffer tests/test_server tests/test_client
 # --- END ADDED FOR TESTING ----
 
-all: server client tests/testing_server tests testing
+all: server client tests/testing_server tests/testing_still_server tests testing
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(FLAGS) -c -o $@ $<
@@ -23,12 +23,12 @@ server: $(OBJS) $(SRC_DIR)/server.c
 client: $(OBJS) $(SRC_DIR)/client.c
 	$(CC) $(FLAGS) $(SRC_DIR)/client.c -o client $(OBJS)
 
-tests/testing_server: $(OBJS) tests/testing_server.c
-	$(CC) $(FLAGS) tests/testing_server.c -o tests/testing_server $(OBJS)
+tests/testing_%: $(OBJS) tests/testing_%.c
+	$(CC) $(FLAGS) $@.c -o $@ $(OBJS)
 
 
 tests/test_%: $(TEST_SRC_DIR)/test_%.c $(OBJS) 
-	$(CC) $(FLAGS) -o $@ $< $(OBJS)
+	$(CC) $(FLAGS) $@ -o $@ $< $(OBJS)
 testing: $(TESTS)
 
 

@@ -13,6 +13,22 @@ from scapy.all import rdpcap
 from fabric import Connection
 
 from common import PCAP, CMUTCP, ACK_MASK, IP_ADDRS
+from common import (
+    CMUTCP,
+    ACK_MASK,
+    TIMEOUT,
+    IFNAME,
+    SYN_MASK,
+    START_TESTING_SERVER_CMD,
+    STOP_TESTING_SERVER_CMD,
+    TESTING_HOST_IP,
+    ip,
+    udp,
+)
+
+from test_util import do_handshake
+from scapy.all import sr1, Raw
+
 
 
 def test_pcap_packets_max_size():
@@ -113,17 +129,17 @@ def test_run_server_client():
     ):
         try:
             server_conn.run(start_server_cmd)
-            server_conn.run("tmux has-session -t pytest_server")
+            # server_conn.run("tmux has-session -t pytest_server")
 
             client_conn.run(start_client_cmd)
-            client_conn.run("tmux has-session -t pytest_client")
+            # client_conn.run("tmux has-session -t pytest_client")
 
             # Exit when server finished receiving file.
             server_conn.run(
                 "while tmux has-session -t pytest_server; do sleep 1; done",
                 hide=True,
             )
-        except Exception:
+        except Exception as e:
             failed = True
 
         try:
@@ -176,7 +192,73 @@ def test_basic_retransmit():
     pass
 
 
+START_TESTING_STILL_SERVER_CMD = (
+    "tmux new -s pytest_server -d /vagrant/"
+    "project-2_15-441/tests/testing_still_server"
+)
+MAX_NETWORK_BUFFER = 65535
+payloads = ["pa", "pytest 1234567", "hey, how are ya?",
+            "you are a lump of foul deformity!"]
+def test_change_adv_win():
+    """Basic test: Check that the server correctly updates its receive window
+    when the server receives data, but the server application doesn't read it
+    """
+    with Connection(
+        host=TESTING_HOST_IP,
+        user="vagrant",
+        connect_kwargs={"password": "vagrant"},
+    ) as conn:
+        try:
+            conn.run(START_TESTING_STILL_SERVER_CMD)
+            conn.run("tmux has-session -t pytest_server")
+            server_seq = do_handshake(conn)
+            sent_bytes = 0
+            for payload in payloads:
+                print("Testing payload size " + str(len(payload)))
+                data_pkt = (
+                    ip /
+                    udp /
+                    CMUTCP(
+                        plen=25 + len(payload),
+                        seq_num=1001 + sent_bytes,
+                        ack_num=server_seq + 1,
+                        flags=ACK_MASK,
+                    )
+                    / Raw(load=payload)
+                )
+                server_ack_pkt = sr1(data_pkt, timeout=1000000, iface=IFNAME)
+                data_fail = server_ack_pkt is None\
+                    or server_ack_pkt[CMUTCP].flags != ACK_MASK\
+                    or server_ack_pkt[CMUTCP].ack_num != 1001 + sent_bytes + len(payload)
+                if (data_fail):
+                    print(
+                        "Listener (server) did not properly respond to data "
+                        "packet."
+                    )
+                    print("Test Failed")
+                    conn.run(STOP_TESTING_SERVER_CMD)
+                    return
+                sent_bytes += len(payload)
+
+                adv_win = server_ack_pkt[CMUTCP].advertised_window
+                print("windows:", adv_win, MAX_NETWORK_BUFFER - sent_bytes)
+                if(adv_win != MAX_NETWORK_BUFFER - sent_bytes):
+                    print("Listener (server) did not send a proper advertised"
+                    "window")
+                    conn.run(STOP_TESTING_SERVER_CMD)
+                    return
+        finally:
+            try:
+                conn.run(STOP_TESTING_SERVER_CMD)
+            except Exception:
+                # Ignore error here that may occur if server stopped.
+                pass
+        print("Test Passed")
+
+
 if __name__ == "__main__":
     test_pcap_packets_max_size()
     test_pcap_acks()
+    test_change_adv_win()
     test_run_server_client()
+

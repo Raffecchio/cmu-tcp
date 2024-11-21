@@ -141,7 +141,7 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
 
   /* reminder: sock->window.last_seq_received is useful when waiting to die */
   sock->window.last_seq_received = MAX(sock->window.last_seq_received,
-      last_seqnum);
+      last_seqnum - 1);
 
   if(data_made_available_to_user)
     pthread_cond_signal(&(sock->wait_cond));

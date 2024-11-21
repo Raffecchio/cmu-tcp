@@ -50,7 +50,6 @@ void functionality(cmu_socket_t *sock) {
  * Param: argv - values of command line arguments provided
  *
  * Purpose: To provide a sample listener for the TCP connection.
- *
  */
 int main() {
   int portno;

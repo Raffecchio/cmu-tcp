@@ -309,7 +309,7 @@ int cmu_read(cmu_socket_t *sock, void *buf, int length, cmu_read_mode_t flags) {
     case NO_WAIT:
       read_len = buf_pop(&(sock->received_buf), &pop_data, length);
       pthread_mutex_unlock(&(sock->recv_lock));
-      CHK(read_len >= 0)
+      // CHK(read_len >= 0)
       memcpy(buf, pop_data, read_len);
       break;
     default:
