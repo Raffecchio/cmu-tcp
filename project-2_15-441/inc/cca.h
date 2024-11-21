@@ -13,6 +13,6 @@
 
 void cca_dup_ack(cmu_socket_t *sock);
 void cca_new_ack(cmu_socket_t *sock);
-void fast_retransmit(cmu_socket_t *sock);
+void fast_recovery(cmu_socket_t *sock);
 void cca_enter_ss_from_timeout(cmu_socket_t *sock);
 #endif
