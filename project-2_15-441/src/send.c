@@ -72,7 +72,8 @@ cmu_tcp_header_t *get_base_pkt(cmu_socket_t *sock, uint16_t pl_len) {
  */
 static cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i) {
     /* resend the leftmost bytes, up to MSS, in the window */
-    uint32_t send_winlen = buf_len(&(sock->window.send_win));
+    uint32_t send_winlen = MIN(buf_len(&(sock->window.send_win)),
+        sock->window.adv_win);
     uint16_t payload_len = MIN(send_winlen - i, (uint32_t)MSS);
     cmu_tcp_header_t *pkt = get_base_pkt(sock, payload_len);
     uint8_t *payload = get_payload((uint8_t*)pkt);
@@ -92,7 +93,8 @@ static cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i) {
  */
 cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   fill_send_win(sock);
-  uint32_t send_winlen = buf_len(&(sock->window.send_win));
+  uint32_t send_winlen = MIN(buf_len(&(sock->window.send_win)),
+      sock->window.adv_win);
 
   /* check timeout & resend leftmost window bytes if so */
   struct timeval now;
@@ -100,11 +102,6 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   double elapsed_ms = (now.tv_sec - sock->window.last_send)*1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
   if(timeout || (sock->window.dup_ack_cnt >= 3)) {
-  // if((sock->window.num_inflight > 0)
-  //     && (sock->window.last_send >= 0)
-  //     && ((elapsed_ms >= DEFAULT_TIMEOUT)
-  //     || (sock->window.dup_ack_cnt >= 3))) {
-    printf("timeout!\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight = MAX(get_payload_len(pkt),
         sock->window.num_inflight);
