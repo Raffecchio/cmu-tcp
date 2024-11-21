@@ -54,10 +54,8 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     return 0;
 
   int is_standalone = (get_payload_len(pkt) == 0);
-  
   int is_dup_ack = (ack_num == sock->window.last_ack_received) && is_standalone;
   sock->window.dup_ack_cnt += is_dup_ack;
-  
   if(ack_num > sock->window.last_ack_received) {
     // Not 100% clear to me why we update last_send here;
     struct timeval now;
@@ -209,6 +207,7 @@ uint8_t* chk_recv_pkt(cmu_socket_t *sock, cmu_read_mode_t flags) {
       ack_fd.events = POLLIN;
       // Timeout after DEFAULT_TIMEOUT.
       if (poll(&ack_fd, 1, DEFAULT_TIMEOUT) <= 0) {
+        printf("timeout from chk_recv_pkt\n");
         break;
       }
     }

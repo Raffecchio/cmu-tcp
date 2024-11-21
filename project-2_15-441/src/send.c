@@ -94,41 +94,56 @@ cmu_tcp_header_t *get_win_pkt(cmu_socket_t *sock, uint32_t i) {
  * immediately after.
  */
 cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
+  fill_send_win(sock);
+  uint32_t send_winlen = buf_len(&(sock->window.send_win));
+
   /* check timeout & resend leftmost window bytes if so */
   struct timeval now;
   gettimeofday(&now, NULL);
   double elapsed_ms = (now.tv_sec - sock->window.last_send) * 1000.0;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
-  if(timeout) {
-    cca_enter_ss_from_timeout(sock);
-  }  
-  fill_send_win(sock);
-  uint32_t send_winlen = buf_len(&(sock->window.send_win));
 
-  if (timeout || (sock->window.dup_ack_cnt >= 3 && (sock->is_fast_recovery == 0))) {
-    printf("timeout!\n");
-    if(sock->window.dup_ack_cnt >= 3 && (sock->is_fast_recovery == 0)) {
-      sock->is_fast_recovery = 1;
-    }
+  if (timeout) {
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight =
         MAX(get_payload_len(pkt), sock->window.num_inflight);
 
     gettimeofday(&now, NULL);
     sock->window.last_send = now.tv_sec;
-    
+
+    sock->window.dup_ack_cnt = 0;
     return pkt;
   }
+
+  // if(timeout || sock->window.dup_ack_cnt >= 3) {
+  // // if((sock->window.num_inflight > 0)
+  // //     && (sock->window.last_send >= 0)
+  // //     && ((elapsed_ms >= DEFAULT_TIMEOUT)
+  // //     || (sock->window.dup_ack_cnt >= 3))) {
+  //   hdr_t *pkt = get_win_pkt(sock, 0);
+  //   sock->window.num_inflight = MAX(get_payload_len(pkt),
+  //       sock->window.num_inflight);
+
+  //   gettimeofday(&now, NULL);
+  //   sock->window.last_send = now.tv_sec;
+  // if(timeout) {
+  //   sock->window.dup_ack_cnt = 0;
+  //   cca_enter_ss_from_timeout(sock);
+  // } else {
+  //   cca_dup_ack(sock);
+  // }
+  //   return pkt;
+  // }
 
   /* send any data in the window that has not been made in-flight */
   uint32_t num_inflight = sock->window.num_inflight;
   if (num_inflight < send_winlen) {
     hdr_t *pkt = get_win_pkt(sock, num_inflight);
     if (num_inflight == 0) {
-      gettimeofday(&now, NULL);
-      sock->window.last_send = now.tv_sec;
       sock->window.dup_ack_cnt = 0;
     }
+    gettimeofday(&now, NULL);
+    sock->window.last_send = now.tv_sec;
     sock->window.num_inflight += get_payload_len(pkt);
     return pkt;
   }
