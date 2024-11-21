@@ -28,11 +28,11 @@ void cca_dup_ack(cmu_socket_t *sock) {
       ssthresh = is_slow_start ? (cwin * 2) : (cwin * .5);
       sock->window.cwin = ssthresh + (3 * MSS);
       sock->is_fast_recovery = 1;
-      fast_recovery(sock);
-    
+      fast_recovery(sock); 
   } else {
       sock->window.cwin += MSS;
   }
+  fill_send_win(sock);
   return;
 }
 
@@ -47,11 +47,11 @@ void cca_new_ack(cmu_socket_t *sock) {
   } else {  // congestion avoidance
     sock->window.cwin += (MSS * (MSS / sock->window.cwin));
   }
+  fill_send_win(sock);
   return;
 }
 
 void fast_recovery(cmu_socket_t *sock) {
-  fill_send_win(sock);
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
   // Note: 
@@ -89,5 +89,6 @@ void cca_enter_ss_from_timeout(cmu_socket_t *sock) {
   sock->is_fast_recovery = 0;
   sock->ssthresh = sock->window.cwin / 2;
   sock->window.cwin = MSS;
+  fill_send_win(sock);
   return;
 }
