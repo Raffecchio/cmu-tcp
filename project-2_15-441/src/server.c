@@ -16,14 +16,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
 
 #include "cmu_tcp.h"
-#include "send.h"
 
-#define BUF_SIZE 65535
-
-
+#define BUF_SIZE 10000
 
 /*
  * Param: sock - used for reading and writing to a connection
@@ -37,34 +33,21 @@ void functionality(cmu_socket_t *sock) {
   FILE *fp;
   int n;
 
-  // n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
-  // printf("R: %s\n", buf);
-  // printf("N: %d\n", n);
-  // cmu_write(sock, "hi there", 9);
-  // n = cmu_read(sock, buf, 200, NO_FLAG);
-  // printf("R: %s\n", buf);
-  // printf("N: %d\n", n);
-  // cmu_write(sock, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
-
-  fp = fopen("/tmp/file", "w");
-
-  double now = get_time_ms();
-  n = 0;
-  while(n < 5000000) {
-    int old_n = n;
-    int m = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
-    n += m;
-    if(n > old_n) {
-      printf("n increased to %d\n", n);
-    }
-    fwrite(buf, 1, m, fp);
-  }
-
+  n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
+  printf("R: %s\n", buf);
   printf("N: %d\n", n);
-  fclose(fp);
+  cmu_write(sock, "hi there", 9);
+  n = cmu_read(sock, buf, 200, NO_FLAG);
+  printf("R: %s\n", buf);
+  printf("N: %d\n", n);
+  cmu_write(sock, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
 
-  double elapsed_s = (get_time_ms() - now)/1000;
-  printf("done in %f s\n", elapsed_s);
+  sleep(1);
+  n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
+  printf("N: %d\n", n);
+  fp = fopen("/tmp/file.c", "w");
+  fwrite(buf, 1, n, fp);
+  fclose(fp);
 }
 
 int main() {
@@ -72,7 +55,7 @@ int main() {
   char *serverip;
   char *serverport;
   cmu_socket_t socket;
-  
+
   serverip = getenv("server15441");
   if (!serverip) {
     serverip = "10.0.1.1";
@@ -83,6 +66,7 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
+
   if (cmu_socket(&socket, TCP_LISTENER, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }

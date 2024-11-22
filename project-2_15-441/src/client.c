@@ -22,26 +22,23 @@ void functionality(cmu_socket_t *sock) {
   uint8_t buf[9898];
   int read;
   FILE *fp;
-  int n;
-  
-  // cmu_write(sock, "hi there", 8);
-  // cmu_write(sock, " https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
-  // cmu_write(sock, " https://www.youtube.com/watch?v=Yb6dZ1IFlKc", 44);
-  // cmu_write(sock, " https://www.youtube.com/watch?v=xvFZjo5PgG0", 44);
-  // cmu_write(sock, " https://www.youtube.com/watch?v=8ybW48rKBME", 44);
-  // cmu_write(sock, " https://www.youtube.com/watch?v=xfr64zoBTAQ", 45);
-  // n = cmu_read(sock, buf, 200, NO_FLAG);
-  // printf("R: %s\n", buf);
-  // printf("N: %d\n", n);
 
-  // cmu_write(sock, "hi there again!", 16);
-  // cmu_read(sock, buf, 200, NO_FLAG);
-  // printf("R: %s\n", buf);
+  cmu_write(sock, "hi there", 8);
+  cmu_write(sock, " https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
+  cmu_write(sock, " https://www.youtube.com/watch?v=Yb6dZ1IFlKc", 44);
+  cmu_write(sock, " https://www.youtube.com/watch?v=xvFZjo5PgG0", 44);
+  cmu_write(sock, " https://www.youtube.com/watch?v=8ybW48rKBME", 44);
+  cmu_write(sock, " https://www.youtube.com/watch?v=xfr64zoBTAQ", 45);
+  cmu_read(sock, buf, 200, NO_FLAG);
 
-  // read = cmu_read(sock, buf, 200, NO_WAIT);
-  // printf("Read: %d\n", read);
+  cmu_write(sock, "hi there", 9);
+  cmu_read(sock, buf, 200, NO_FLAG);
+  printf("R: %s\n", buf);
 
-  fp = fopen("/vagrant/project-2_15-441/file", "rb");
+  read = cmu_read(sock, buf, 200, NO_WAIT);
+  printf("Read: %d\n", read);
+
+  fp = fopen("/vagrant/project-2_15-441/src/cmu_tcp.c", "rb");
   read = 1;
   while (read > 0) {
     read = fread(buf, 1, 2000, fp);
@@ -67,6 +64,7 @@ int main() {
     serverport = "15441";
   }
   portno = (uint16_t)atoi(serverport);
+
   if (cmu_socket(&socket, TCP_INITIATOR, portno, serverip) < 0) {
     exit(EXIT_FAILURE);
   }
