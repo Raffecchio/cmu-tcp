@@ -56,8 +56,14 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   int is_standalone = (get_payload_len(pkt) == 0);
   sock->window.dup_ack_cnt += ((ack_num == sock->window.last_ack_received)
-    && is_standalone && (sock->window.num_inflight > 0));
+    && is_standalone && (sock->window.num_inflight > 0) && ack_valid);
   
+  if(ack_num > sock->window.last_ack_received) {
+    sock->window.last_send = get_time_ms();
+    cca_new_ack(sock);
+    // sock->window.last_send should be updated only when passes the num_inflight,
+    // in which case the code in send will do just that
+  }  
  
   uint32_t num_newly_acked = ack_num - sock->window.last_ack_received;
   sock->window.last_ack_received = ack_num;
@@ -70,12 +76,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     0 : sock->window.num_inflight - num_newly_acked;
   
   sock->window.adv_win = adv_win;
-  if(ack_num > sock->window.last_ack_received) {
-    sock->window.last_send = get_time_ms();
-    cca_new_ack(sock);
-    // sock->window.last_send should be updated only when passes the num_inflight,
-    // in which case the code in send will do just that
-  }
+
 
    if(is_standalone && sock->window.dup_ack_cnt > 3) {
     printf("trigger! dup ack 3\n");
