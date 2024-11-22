@@ -104,6 +104,8 @@ int init_sock(cmu_socket_t *sock, const cmu_socket_type_t socket_type,
 
 
 static int active_connect(cmu_socket_t *sock) {
+  // uint32_t seq_syn_sent = rand();
+  uint32_t seq_syn_sent = 100;
   while (1) {
     // Initiator handshake;
     size_t conn_len = sizeof(sock->conn);
@@ -116,7 +118,6 @@ static int active_connect(cmu_socket_t *sock) {
     struct timeval tv;
     gettimeofday(&tv,NULL);
     srand(tv.tv_usec);
-    uint32_t seq_syn_sent = rand();
     printf("CLIENT init seq %d\n", seq_syn_sent);
     uint32_t ack = 0;
     uint16_t hlen = sizeof(cmu_tcp_header_t);
@@ -136,6 +137,8 @@ static int active_connect(cmu_socket_t *sock) {
     /* receive SYN_ACK */
     uint8_t *pkt_syn_ack = chk_recv_pkt(sock, TIMEOUT);
     cmu_tcp_header_t *hdr_syn_ack_recv = (cmu_tcp_header_t *)pkt_syn_ack;
+    if(hdr_syn_ack_recv == NULL)
+      continue;
     flags = get_flags(hdr_syn_ack_recv);
     // received syn_ack;
     if (flags != (SYN_FLAG_MASK | ACK_FLAG_MASK))
@@ -230,7 +233,6 @@ static int passive_connect(cmu_socket_t *sock) {
       int seq_correct = (get_seq(hdr_two) == sock->window.next_seq_expected);
       if ((get_flags(hdr_two) != ACK_FLAG_MASK)
           || !syn_ack_acked
-          || (get_plen(hdr_two) != hlen)
           || !seq_correct) {
         free(pkt_ack_recv);
         continue;

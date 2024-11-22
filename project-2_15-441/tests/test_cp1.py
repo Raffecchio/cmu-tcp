@@ -183,6 +183,95 @@ def test_basic_reliable_data_transfer():
     that the input file equals the output file
     """
     # Can you think of how you can test this? Give it a try!
+    print("Running test_run_server_client()")
+
+    # We are using `tmux` to run the server and client in the background.
+    #
+    # This might also help you debug your code if the test fails. You may call
+    # `getchar()` in your code to pause the program at any point and then use
+    # `tmux attach -t pytest_server` or `tmux attach -t pytest_client` to
+    # attach to the relevant TMUX session and see the output.
+
+    start_server_cmd = (
+        "tmux new -s pytest_server -d /vagrant/project-2_15-441/server"
+    )
+    start_client_cmd = (
+        "tmux new -s pytest_client -d /vagrant/project-2_15-441/client"
+    )
+    tcset_cmd = (
+        "sudo tcset $IFNAME --rate 10Mbps --delay 20ms --loss 0.1% --overwrite"
+    )
+    stop_server_cmd = "tmux kill-session -t pytest_server"
+    stop_client_cmd = "tmux kill-session -t pytest_client"
+
+    failed = False
+
+    original_file = Path("/vagrant/project-2_15-441/src/cmu_tcp.c")
+    received_file = Path("/tmp/file.c")
+
+    received_file.unlink(missing_ok=True)
+
+    with (
+        Connection(
+            host=IP_ADDRS["server"],
+            user="vagrant",
+            connect_kwargs={"password": "vagrant"},
+        ) as server_conn,
+        Connection(
+            host=IP_ADDRS["client"],
+            user="vagrant",
+            connect_kwargs={"password": "vagrant"},
+        ) as client_conn,
+    ):
+        try:
+            server_conn.run(start_server_cmd)
+            # server_conn.run("tmux has-session -t pytest_server")
+
+            client_conn.run(start_client_cmd)
+            # client_conn.run("tmux has-session -t pytest_client")
+
+            # Exit when server finished receiving file.
+            server_conn.run(
+                "while tmux has-session -t pytest_server; do sleep 1; done",
+                hide=True,
+            )
+        except Exception as e:
+            failed = True
+
+        try:
+            client_conn.run("tmux has-session -t pytest_client", hide=True)
+            print("stop client")
+            client_conn.run(stop_client_cmd, hide=True)
+        except Exception:
+            # Ignore error here that may occur if client already shut down.
+            pass
+        try:
+            server_conn.local("tmux has-session -t pytest_server", hide=True)
+            print("stop server")
+            server_conn.local(stop_server_cmd, hide=True)
+        except Exception:
+            # Ignore error here that may occur if server already shut down.
+            pass
+        if failed:
+            print("Test failed: Error running server or client")
+            return
+
+        # Compare SHA256 hashes of the files.
+        server_hash_result = server_conn.run(f"sha256sum {received_file}")
+        client_hash_result = client_conn.run(f"sha256sum {original_file}")
+
+        if not server_hash_result.ok or not client_hash_result.ok:
+            print("Test failed: Error getting file hashes")
+            return
+
+        server_hash = server_hash_result.stdout.split()[0]
+        client_hash = client_hash_result.stdout.split()[0]
+
+        if server_hash != client_hash:
+            print("Test failed: File hashes do not match")
+            return
+
+        print("Test passed")
     pass
 
 
@@ -210,7 +299,7 @@ def test_change_adv_win():
     ) as conn:
         try:
             conn.run(START_TESTING_STILL_SERVER_CMD)
-            conn.run("tmux has-session -t pytest_server")
+            # conn.run("tmux has-session -t pytest_server")
             server_seq = do_handshake(conn)
             sent_bytes = 0
             for payload in payloads:

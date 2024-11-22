@@ -44,6 +44,8 @@
 static inline ssize_t send_pkt(const cmu_socket_t *sock,
     cmu_tcp_header_t *pkt) {
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
+  // printf("sending packet with seq num %d and payload len %d\n",
+  //     get_seq(pkt), get_payload_len(pkt));
   // set_advertised_window(pkt, buf_len(&(sock->window.recv_win)));
   ssize_t res = sendto(sock->socket, pkt, get_plen(pkt), 0,
         (struct sockaddr*)&(sock->conn), sizeof(sock->conn));
@@ -127,7 +129,7 @@ void *begin_backend(void *in) {
     }
 
     int send_dup = (sock->window.next_seq_expected == old_next_seq_expected);
-    if((num_recv > 0) &&
+    if((recv_pkt != NULL) && (get_payload_len(recv_pkt) > 0) &&
         ((pkt_send == NULL) || send_dup)) {
       /* send standalone ACK */
       cmu_tcp_header_t *pkt = get_base_pkt(sock, 0);

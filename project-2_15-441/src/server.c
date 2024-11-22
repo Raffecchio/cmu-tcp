@@ -16,10 +16,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "cmu_tcp.h"
+#include "send.h"
 
-#define BUF_SIZE 11000
+#define BUF_SIZE 65535
 
 /*
  * Param: sock - used for reading and writing to a connection
@@ -42,12 +44,23 @@ void functionality(cmu_socket_t *sock) {
   // printf("N: %d\n", n);
   // cmu_write(sock, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
 
-  sleep(1);
+  double now = get_time_ms();
+  n = 0;
+  while(n < 49999) {
+    int old_n = n;
+    n = buf_len(&(sock->received_buf));
+    if(n > old_n) {
+      printf("n increased to %d\n", n);
+    }
+  }
   n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
   printf("N: %d\n", n);
   fp = fopen("/tmp/file.c", "w");
   fwrite(buf, 1, n, fp);
   fclose(fp);
+
+  double elapsed_s = (get_time_ms() - now)/1000;
+  printf("done in %f s\n", elapsed_s);
 }
 
 int main() {

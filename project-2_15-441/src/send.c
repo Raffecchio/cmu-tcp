@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -84,6 +85,12 @@ static cmu_tcp_header_t* get_win_pkt(cmu_socket_t *sock, uint32_t i) {
 }
 
 
+double get_time_ms(void) {
+  struct timespec now;
+  timespec_get(&now, TIME_UTC);
+  return ((double) now.tv_sec)*1000 + ((double)now.tv_nsec)/1000000000;
+}
+
 /**
  * Handles sending window, including actual sending, timeout, sending new data,
  * shifting window, etc.
@@ -97,18 +104,16 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
       sock->window.adv_win);
 
   /* check timeout & resend leftmost window bytes if so */
-  struct timeval now;
-  gettimeofday(&now, NULL);
-  double elapsed_ms = ((double)(now.tv_usec - sock->window.last_send))
-    /(double)1000;
+  double now = get_time_ms();
+  double elapsed_ms = now - sock->window.last_send;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
   if(timeout || (sock->window.dup_ack_cnt >= 3)) {
+    // printf("------------timeout!--------------\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight = MAX(get_payload_len(pkt),
         sock->window.num_inflight);
 
-    gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_usec;
+    sock->window.last_send = get_time_ms();
     sock->window.dup_ack_cnt = 0;
     return pkt;
   }
@@ -118,8 +123,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   if(num_inflight < send_winlen) {
     hdr_t *pkt = get_win_pkt(sock, num_inflight);
     if(num_inflight == 0) {
-      gettimeofday(&now, NULL);
-      sock->window.last_send = now.tv_usec;
+      sock->window.last_send = get_time_ms();
       sock->window.dup_ack_cnt = 0;
     }
     sock->window.num_inflight += get_payload_len(pkt);

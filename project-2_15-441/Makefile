@@ -14,7 +14,7 @@ TESTS = tests/test_buffer tests/test_server tests/test_client
 
 all: server client tests/testing_server tests/testing_still_server tests testing
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(INC_DIR)/*
 	$(CC) $(FLAGS) -c -o $@ $<
 
 server: $(OBJS) $(SRC_DIR)/server.c

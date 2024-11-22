@@ -10,6 +10,7 @@
 #include "cmu_packet.h"
 #include "cmu_tcp.h"
 #include "recv.h"
+#include "send.h"
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -47,7 +48,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   /* validate */
   int ack_valid = (ack_num <=
-      sock->window.last_ack_received + buf_len(&(sock->window.send_win)));
+      sock->window.last_ack_received + sock->window.num_inflight);
   CHK_MSG("Error: Invalid ack number in received ACK packet", ack_valid);
   if(ack_num < sock->window.last_ack_received)
     return 0;
@@ -57,9 +58,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     && is_standalone;
   if(ack_num > sock->window.last_ack_received) {
     sock->window.dup_ack_cnt = 0;
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_usec;
+    sock->window.last_send = get_time_ms();
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
   }
@@ -119,7 +118,7 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
       ++pop_len;
     uint8_t *pop_data = NULL;
     CHK(buf_pop(&(sock->window.recv_win), &pop_data, pop_len) == pop_len);
-    CHK(buf_pop(&(sock->window.recv_win), NULL, pop_len) == pop_len);
+    CHK(buf_pop(&(sock->window.recv_mask), NULL, pop_len) == pop_len);
     memcpy(pop_data, payload, payload_len);
     sock->window.next_seq_expected += pop_len;
     while(pthread_mutex_lock(&(sock->recv_lock)) != 0) {}
