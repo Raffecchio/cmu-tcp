@@ -139,11 +139,11 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
   uint32_t num_inflight = sock->window.num_inflight;
   if (num_inflight < send_winlen) {
     hdr_t *pkt = get_win_pkt(sock, num_inflight);
-    // if (num_inflight == 0) {
-    //   sock->window.dup_ack_cnt = 0;
-    // }
+    if (num_inflight == 0) {
+      sock->window.dup_ack_cnt = 0;
+      sock->window.last_send = now.tv_sec;
+    }
     gettimeofday(&now, NULL);
-    sock->window.last_send = now.tv_sec;
     sock->window.num_inflight += get_payload_len(pkt);
     return pkt;
   }
