@@ -50,9 +50,6 @@ ssize_t send_pkt(const cmu_socket_t *sock,
   return res;
 }
 
-
-
-
 void die_if_needed(cmu_socket_t *sock) {
   /* get death lock (NOTE: pthread_mutex_lock returns non-zero on error) */
   while (pthread_mutex_lock(&(sock->death_lock)) != 0) {}
@@ -130,9 +127,13 @@ void *begin_backend(void *in) {
     if((recv_pkt != NULL) && (get_payload_len(recv_pkt) > 0) &&
         ((pkt_send == NULL) || send_dup)) {
       /* send standalone ACK */
+      
+      printf("SENDING DUP %d\n", sock->window.next_seq_expected);
       cmu_tcp_header_t *pkt = get_base_pkt(sock, 0);
       set_flags(pkt, ACK_FLAG_MASK);
       set_ack(pkt, sock->window.next_seq_expected);
+        printf("get_payload_len(pkt) %d\n", get_payload_len(pkt));
+
       send_pkt(sock, pkt);
     };
   }

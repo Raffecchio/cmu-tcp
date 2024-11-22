@@ -54,10 +54,17 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   if(ack_num < sock->window.last_ack_received)
     return 0;
 
-  int is_standalone = (get_payload_len(pkt) == 0);
-  int is_dup_ack_incr = ((ack_num == sock->window.last_ack_received)
-    && is_standalone && (sock->window.num_inflight > 0));
+  // int is_standalone = (get_payload_len(pkt) == 0);
+    int is_standalone = 1;
 
+  printf("is_standalone %d\n", is_standalone);
+  int is_dup_ack_incr = ((ack_num == sock->window.last_ack_received)
+    && is_standalone);
+
+    // && (sock->window.num_inflight > 0))
+    if(is_standalone) {
+  printf("get_payload_len(pkt) %d, ack_num, ack_num == sock->window.last_ack_received %d, %d\n", get_payload_len(pkt), ack_num, sock->window.last_ack_received);
+    }
   sock->window.dup_ack_cnt += is_dup_ack_incr;
   
   if(ack_num > sock->window.last_ack_received) {
@@ -79,7 +86,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   
   sock->window.adv_win = adv_win;
 
-
+printf("ack_num, IS_DUP_ACK, DUP_ACK %d, %d: %d \n", ack_num, is_dup_ack_incr, sock->window.dup_ack_cnt);
    if(is_dup_ack_incr && sock->window.dup_ack_cnt >= 3) {
     printf("trigger! dup ack 3\n");
     cca_dup_ack_3(sock);
