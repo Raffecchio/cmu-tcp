@@ -22,7 +22,7 @@
  */
 
 // packet lengths
-#define MAX_LEN 100
+#define MAX_LEN 1400
 
 // window variables
 #define CP1_WINDOW_SIZE (MSS * 32)

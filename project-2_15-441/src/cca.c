@@ -57,11 +57,9 @@ void fast_recovery(cmu_socket_t *sock) {
   // Note: 
   // num_inflight should not change since we are retransmitting something unacked/blocking the sending window
   // int new_inflight = MAX(get_payload_len(pkt_send), sock->window.num_inflight);
-  struct timeval now;
-  gettimeofday(&now, NULL);
 
   // Note: should always update the last_send
-  sock->window.last_send = now.tv_sec;
+  sock->window.last_send = get_time_ms();;
 
   if (pkt_send != NULL) {
     set_ack(pkt_send, sock->window.next_seq_expected);
