@@ -119,9 +119,9 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
 
     sock->window.last_send = get_time_ms();
     sock->window.dup_ack_cnt = 0;
-    if(timeout) {
-    cca_enter_ss_from_timeout(sock);
-    }
+    // if(timeout) {
+    // cca_enter_ss_from_timeout(sock);
+    // }
     return pkt;
   }
 
