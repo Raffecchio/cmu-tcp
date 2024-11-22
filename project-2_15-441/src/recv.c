@@ -55,8 +55,10 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     return 0;
 
   int is_standalone = (get_payload_len(pkt) == 0);
-  sock->window.dup_ack_cnt += ((ack_num == sock->window.last_ack_received)
+  int is_dup_ack_incr = ((ack_num == sock->window.last_ack_received)
     && is_standalone && (sock->window.num_inflight > 0) && ack_valid);
+
+  sock->window.dup_ack_cnt += is_dup_ack_incr;
   
   if(ack_num > sock->window.last_ack_received) {
     sock->window.last_send = get_time_ms();
@@ -78,7 +80,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   sock->window.adv_win = adv_win;
 
 
-   if(is_standalone && sock->window.dup_ack_cnt > 3) {
+   if(is_dup_ack_incr && sock->window.dup_ack_cnt >= 3) {
     printf("trigger! dup ack 3\n");
     cca_dup_ack_3(sock);
   }
