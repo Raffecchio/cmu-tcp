@@ -18,6 +18,7 @@
 
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 void cca_dup_ack_3(cmu_socket_t *sock) {
   if (sock->is_fast_recovery == 0) {
@@ -49,6 +50,7 @@ void cca_new_ack(cmu_socket_t *sock) {
     sock->window.cwin += (MSS * (MSS / sock->window.cwin));
   }
   sock->window.cwin = MAX(sock->window.cwin, MSS);
+  sock->window.cwin = MIN(sock->window.cwin, MAX_NETWORK_BUFFER);
   sock->ssthresh = MAX(sock->ssthresh, MSS);
   return;
 }
