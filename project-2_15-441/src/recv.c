@@ -35,7 +35,7 @@ int is_valid_recv(cmu_socket_t *sock, const cmu_tcp_header_t* pkt) {
      * already ACKed, the window size is guaranteed to be at least as large as
      * what was advertised when the data was sent */
     if((seq_num + payload_len - sock->window.next_seq_expected)
-        >= buf_len(&(sock->window.recv_win)))
+        > buf_len(&(sock->window.recv_win)))
       return 0;
   }
   return 1;
@@ -57,8 +57,8 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
     && is_standalone;
   if(ack_num > sock->window.last_ack_received) {
-    sock->window.dup_ack_cnt = 0;
     sock->window.last_send = get_time_ms();
+    sock->window.dup_ack_cnt = 0;
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
   }
@@ -73,6 +73,8 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     0 : sock->window.num_inflight - num_newly_acked;
   
   sock->window.adv_win = adv_win;
+  sock->window.num_inflight = MIN(sock->window.num_inflight, adv_win);
+
   return 0;
 }
 
@@ -102,13 +104,14 @@ static int on_recv_data(cmu_socket_t* sock, uint16_t dst, uint32_t seq_num,
   /* ignore data if it has any bytes already ACKed */
   if(seq_num < sock->window.next_seq_expected)
     return 0;
+  // printf("received packet with seq num %d and size %d\n", seq_num, payload_len);
 
   uint32_t last_seqnum = seq_num + payload_len;
   CHK_MSG("Error: Received data which would exceed the network buffer",
       last_seqnum - sock->window.next_seq_expected
-      < buf_len(&(sock->window.recv_win)))
+      <= buf_len(&(sock->window.recv_win)))
 
-  CHK(buf_get(&(sock->window.recv_mask), 0) == 0);
+  // CHK(buf_get(&(sock->window.recv_mask), 0) == 0);
 
   /* check if data can be popped & added to the received buffer */
   int data_made_available_to_user = (seq_num == sock->window.next_seq_expected);
@@ -162,7 +165,8 @@ int on_recv_pkt(cmu_socket_t *sock, const cmu_tcp_header_t *pkt) {
     on_recv_ack(sock, pkt);
   }
   
-  if(payload_len > 0) {
+  // if(payload_len > 0) {
+  if(1) {
     uint32_t num_recv = on_recv_data(sock, get_dst(pkt), get_seq(pkt),
         get_payload((uint8_t*)pkt), payload_len);
     CHK(num_recv)

@@ -43,6 +43,8 @@
  * function will fill in the advertised widow.*/
 static inline ssize_t send_pkt(const cmu_socket_t *sock,
     cmu_tcp_header_t *pkt) {
+  // printf("sending pkt with seq num %d and size %d\n", get_seq(pkt),
+  //     get_payload_len(pkt));
   CHK_MSG("Error: Packet is too large!", get_plen(pkt) <= MAX_LEN);
   // printf("sending packet with seq num %d and payload len %d\n",
   //     get_seq(pkt), get_payload_len(pkt));

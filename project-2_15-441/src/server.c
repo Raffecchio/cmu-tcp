@@ -44,19 +44,21 @@ void functionality(cmu_socket_t *sock) {
   // printf("N: %d\n", n);
   // cmu_write(sock, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
 
+  fp = fopen("/tmp/file", "w");
+
   double now = get_time_ms();
   n = 0;
-  while(n < 49999) {
+  while(n < 5000000) {
     int old_n = n;
-    n = buf_len(&(sock->received_buf));
+    int m = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
+    n += m;
     if(n > old_n) {
       printf("n increased to %d\n", n);
     }
+    fwrite(buf, 1, m, fp);
   }
-  n = cmu_read(sock, buf, BUF_SIZE, NO_FLAG);
+
   printf("N: %d\n", n);
-  fp = fopen("/tmp/file.c", "w");
-  fwrite(buf, 1, n, fp);
   fclose(fp);
 
   double elapsed_s = (get_time_ms() - now)/1000;
