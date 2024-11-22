@@ -18,15 +18,14 @@ typedef cmu_tcp_header_t hdr_t;
 
 /* adds any available bytes to the send window from the sending buffer */
 static int fill_send_win(cmu_socket_t *sock) {
-  uint32_t send_winlen = buf_len(&(sock->window.send_win));
+  uint32_t send_winlen = MIN(buf_len(&(sock->window.send_win)),
+      sock->window.adv_win);
   if(send_winlen >= sock->window.adv_win)
     return 0;
 
-  CHK(sock->window.adv_win >= send_winlen)
-
   while (pthread_mutex_lock(&(sock->send_lock)) != 0) {}
   uint32_t num_fill = MIN(buf_len(&(sock->sending_buf)),
-      (sock->window.adv_win - sock->window.num_inflight));
+      (sock->window.adv_win - send_winlen));
   uint8_t *new_send_data;
   buf_pop(&(sock->sending_buf), &new_send_data, num_fill);
   pthread_mutex_unlock(&(sock->send_lock));
