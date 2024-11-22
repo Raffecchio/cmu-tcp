@@ -102,9 +102,6 @@ double get_time_ms(void) {
  * immediately after.
  */
 cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
-  fill_send_win(sock);
-  uint32_t send_winlen = MIN(buf_len(&(sock->window.send_win)),
-      sock->window.adv_win);
 
   /* check timeout & resend leftmost window bytes if so */
   double now = get_time_ms();
@@ -112,6 +109,16 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
   // if((sock->window.num_inflight > 0)
   //     && (timeout || (sock->window.dup_ack_cnt >= 3))) {
+
+
+
+if(timeout) {
+    cca_enter_ss_from_timeout(sock);
+    }
+
+        fill_send_win(sock);
+  uint32_t send_winlen = MIN(buf_len(&(sock->window.send_win)),
+      sock->window.adv_win);
 
     if((sock->window.num_inflight > 0)
       && timeout) {
@@ -122,9 +129,7 @@ cmu_tcp_header_t* chk_send_pkt(cmu_socket_t *sock) {
 
     sock->window.last_send = get_time_ms();
     sock->window.dup_ack_cnt = 0;
-    // if(timeout) {
-    cca_enter_ss_from_timeout(sock);
-    // }
+    
     return pkt;
   }
 
