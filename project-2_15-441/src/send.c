@@ -114,7 +114,7 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
       ((sock->window.num_inflight > 0) &&
        timeout );
 
-  if (will_trigger_fast_retransmit) {
+  if (will_trigger_fast_retransmit == 1) {
     // printf("------------timeout!--------------\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight =
