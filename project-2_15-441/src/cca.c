@@ -21,16 +21,22 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 void cca_dup_ack_3(cmu_socket_t *sock) {
+
   if (sock->is_fast_recovery == 0) {
+      printf("HALVing CWIN on d3 %d \n", sock->window.cwin);
       int32_t cwin = sock->window.cwin;
-      sock->ssthresh = cwin * .5;
+      int32_t ssthresh = sock->ssthresh;
+      
+      sock->ssthresh = (cwin / 2);
       sock->window.cwin = sock->ssthresh + (3 * MSS);
+      printf("HALVed CWIN to %d \n", sock->window.cwin);
       fast_recovery(sock); 
   } else {
       sock->window.cwin += MSS;
   }
   sock->window.cwin = MAX(sock->window.cwin, MSS);
   sock->ssthresh = MAX(sock->ssthresh, MSS);
+  sock->window.cwin = MIN(sock->window.cwin, MAX_NETWORK_BUFFER);
   return;
 }
 
@@ -38,11 +44,14 @@ void cca_new_ack(cmu_socket_t *sock) {
   sock->window.dup_ack_cnt = 0;
   int is_slow_start = sock->window.cwin < sock->ssthresh;
   if (sock->is_fast_recovery == 1) {
+    printf("incr fR\n");
     sock->window.cwin = sock->ssthresh;
     sock->is_fast_recovery = 0;
   } else if (is_slow_start == 1) {
+    printf("incr ss\n");
     sock->window.cwin += MSS;
   } else {  // congestion avoidance
+  printf("incr ca\n");
     sock->window.cwin += (MSS * (MSS / sock->window.cwin));
   }
   sock->window.cwin = MAX(sock->window.cwin, MSS);

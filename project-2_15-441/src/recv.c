@@ -57,19 +57,22 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   // int is_standalone = (get_payload_len(pkt) == 0);
     int is_standalone = 1;
 
-  printf("is_standalone %d\n", is_standalone);
+  // printf("is_standalone %d\n", is_standalone);
   int is_dup_ack_incr = ((ack_num == sock->window.last_ack_received)
     && is_standalone);
 
     // && (sock->window.num_inflight > 0))
-    if(is_standalone) {
-  printf("get_payload_len(pkt) %d, ack_num, ack_num == sock->window.last_ack_received %d, %d\n", get_payload_len(pkt), ack_num, sock->window.last_ack_received);
-    }
+  //   if(is_standalone) {
+  // printf("get_payload_len(pkt) %d, ack_num, ack_num == sock->window.last_ack_received %d, %d\n", get_payload_len(pkt), ack_num, sock->window.last_ack_received);
+  //   }
   sock->window.dup_ack_cnt += is_dup_ack_incr;
   
   if(ack_num > sock->window.last_ack_received) {
+      // printf("NEW ACK, FR: %d, cwin %d \n", sock->is_fast_recovery, sock->window.cwin);
     sock->window.last_send = get_time_ms();
-    cca_new_ack(sock);
+    // cca_new_ack(sock);
+    //       printf("NEW ACK incr cwin cwin %d \n", sock->window.cwin);
+
     // sock->window.last_send should be updated only when passes the num_inflight,
     // in which case the code in send will do just that
   }  
@@ -86,9 +89,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   
   sock->window.adv_win = adv_win;
 
-printf("ack_num, IS_DUP_ACK, DUP_ACK %d, %d: %d \n", ack_num, is_dup_ack_incr, sock->window.dup_ack_cnt);
    if(is_dup_ack_incr && sock->window.dup_ack_cnt >= 3) {
-    printf("trigger! dup ack 3\n");
     cca_dup_ack_3(sock);
   }
 
