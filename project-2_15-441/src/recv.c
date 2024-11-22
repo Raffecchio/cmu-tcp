@@ -48,7 +48,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   /* validate */
   int ack_valid = (ack_num <=
-      sock->window.last_ack_received + sock->window.num_inflight);
+    sock->window.last_ack_received + buf_len(&(sock->window.send_win)));
   CHK_MSG("Error: Invalid ack number in received ACK packet", ack_valid);
   if(ack_num < sock->window.last_ack_received)
     return 0;
@@ -67,7 +67,10 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   /* shift the sending window */
   buf_pop(&(sock->window.send_win), NULL, num_newly_acked);
-  sock->window.num_inflight -= num_newly_acked;
+  /* NOTE: num_newly_acked could be greater than num_inflight due to loss
+   * retransmission */
+  sock->window.num_inflight = num_newly_acked > sock->window.num_inflight ? 
+    sock->window.num_inflight - num_newly_acked : 0;
   
   sock->window.adv_win = adv_win;
   return 0;
