@@ -56,7 +56,6 @@ void cca_new_ack(cmu_socket_t *sock) {
 }
 
 void fast_recovery(cmu_socket_t *sock) {
-  fill_send_win(sock);
   sock->is_fast_recovery = 1;
   cmu_tcp_header_t *pkt_send = get_win_pkt(sock, 0);
   // Note: 
