@@ -77,7 +77,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     // in which case the code in send will do just that
   }
 
-   if(is_standalone && sock->window.dup_ack_cnt >= 3) {
+   if(is_standalone && sock->window.dup_ack_cnt > 3) {
     printf("trigger! dup ack 3\n");
     cca_dup_ack_3(sock);
   }
