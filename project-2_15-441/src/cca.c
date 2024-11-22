@@ -29,7 +29,7 @@ void cca_dup_ack_3(cmu_socket_t *sock) {
       ssthresh = cwin * .5;
       sock->window.cwin = ssthresh + (3 * MSS);
       sock->is_fast_recovery = 1;
-      fast_recovery(sock); 
+      // fast_recovery(sock); 
   } else {
       sock->window.cwin += MSS;
   }
