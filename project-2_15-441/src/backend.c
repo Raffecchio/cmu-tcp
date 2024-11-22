@@ -64,9 +64,9 @@ void die_if_needed(cmu_socket_t *sock) {
   // guaranteed to not add any more data to the sending buffer, so no need
   // to get a lock here
   if ((buf_len(&(sock->sending_buf)) > 0)
-      || (buf_len(&(sock->received_buf)) > 0)
-      || (buf_len(&(sock->window.send_win)) > 0)
-      || (sock->window.last_seq_received > sock->window.next_seq_expected))
+      // || (buf_len(&(sock->received_buf)) > 0)
+      || (sock->window.last_seq_received >= sock->window.next_seq_expected)
+      || (buf_len(&(sock->window.send_win)) > 0))
     return;
   pthread_exit(NULL);
 }
@@ -127,7 +127,7 @@ void *begin_backend(void *in) {
     }
 
     int send_dup = (sock->window.next_seq_expected == old_next_seq_expected);
-    if((num_recv > 0) &&
+    if((recv_pkt != NULL) && (get_payload_len(recv_pkt) > 0) &&
         ((pkt_send == NULL) || send_dup)) {
       /* send standalone ACK */
       cmu_tcp_header_t *pkt = get_base_pkt(sock, 0);

@@ -24,24 +24,24 @@ void functionality(cmu_socket_t *sock) {
   FILE *fp;
   int n;
   
-  cmu_write(sock, "hi there", 8);
-  cmu_write(sock, " https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
-  cmu_write(sock, " https://www.youtube.com/watch?v=Yb6dZ1IFlKc", 44);
-  cmu_write(sock, " https://www.youtube.com/watch?v=xvFZjo5PgG0", 44);
-  cmu_write(sock, " https://www.youtube.com/watch?v=8ybW48rKBME", 44);
-  cmu_write(sock, " https://www.youtube.com/watch?v=xfr64zoBTAQ", 45);
-  n = cmu_read(sock, buf, 200, NO_FLAG);
-  printf("R: %s\n", buf);
-  printf("N: %d\n", n);
+  // cmu_write(sock, "hi there", 8);
+  // cmu_write(sock, " https://www.youtube.com/watch?v=dQw4w9WgXcQ", 44);
+  // cmu_write(sock, " https://www.youtube.com/watch?v=Yb6dZ1IFlKc", 44);
+  // cmu_write(sock, " https://www.youtube.com/watch?v=xvFZjo5PgG0", 44);
+  // cmu_write(sock, " https://www.youtube.com/watch?v=8ybW48rKBME", 44);
+  // cmu_write(sock, " https://www.youtube.com/watch?v=xfr64zoBTAQ", 45);
+  // n = cmu_read(sock, buf, 200, NO_FLAG);
+  // printf("R: %s\n", buf);
+  // printf("N: %d\n", n);
 
-  cmu_write(sock, "hi there again!", 16);
-  cmu_read(sock, buf, 200, NO_FLAG);
-  printf("R: %s\n", buf);
+  // cmu_write(sock, "hi there again!", 16);
+  // cmu_read(sock, buf, 200, NO_FLAG);
+  // printf("R: %s\n", buf);
 
-  read = cmu_read(sock, buf, 200, NO_WAIT);
-  printf("Read: %d\n", read);
+  // read = cmu_read(sock, buf, 200, NO_WAIT);
+  // printf("Read: %d\n", read);
 
-  fp = fopen("/vagrant/project-2_15-441/src/cmu_tcp.c", "rb");
+  fp = fopen("/vagrant/project-2_15-441/file", "rb");
   read = 1;
   while (read > 0) {
     read = fread(buf, 1, 2000, fp);
