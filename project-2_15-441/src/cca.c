@@ -25,8 +25,7 @@ void cca_dup_ack_3(cmu_socket_t *sock) {
       int32_t cwin = sock->window.cwin;
       sock->ssthresh = cwin * .5;
       sock->window.cwin = sock->ssthresh + (3 * MSS);
-      
-      // fast_recovery(sock); 
+      fast_recovery(sock); 
   } else {
       sock->window.cwin += MSS;
   }
@@ -73,7 +72,8 @@ void fast_recovery(cmu_socket_t *sock) {
   uint8_t *fast_rec_ack_pkt = chk_recv_pkt(sock, TIMEOUT);
   // Confirm this is how to check for timeout?
   if (fast_rec_ack_pkt == NULL) {
-    // cca_enter_ss_from_timeout(sock);
+    sock->is_fast_recovery = 0;
+    sock->window.dup_ack_cnt = 0;
     // this will trigger timout logic in main loop
     return;
   }
