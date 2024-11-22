@@ -70,7 +70,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
   /* NOTE: num_newly_acked could be greater than num_inflight due to loss
    * retransmission */
   sock->window.num_inflight = num_newly_acked > sock->window.num_inflight ? 
-    sock->window.num_inflight - num_newly_acked : 0;
+    0 : sock->window.num_inflight - num_newly_acked;
   
   sock->window.adv_win = adv_win;
   return 0;

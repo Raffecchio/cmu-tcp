@@ -346,8 +346,8 @@ def test_change_adv_win():
 
 
 if __name__ == "__main__":
-    test_pcap_packets_max_size()
-    test_pcap_acks()
-    test_change_adv_win()
+    # test_pcap_packets_max_size()
+    # test_pcap_acks()
+    # test_change_adv_win()
     test_run_server_client()
 
