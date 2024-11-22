@@ -55,7 +55,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   int is_standalone = (get_payload_len(pkt) == 0);
   sock->window.dup_ack_cnt += (ack_num == sock->window.last_ack_received)
-    && is_standalone;
+    && is_standalone && (sock->window.num_inflight > 0);
   if(ack_num > sock->window.last_ack_received) {
     sock->window.last_send = get_time_ms();
     sock->window.dup_ack_cnt = 0;
@@ -73,7 +73,6 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     0 : sock->window.num_inflight - num_newly_acked;
   
   sock->window.adv_win = adv_win;
-  // sock->window.num_inflight = MIN(sock->window.num_inflight, adv_win);
 
   return 0;
 }
