@@ -73,7 +73,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
     0 : sock->window.num_inflight - num_newly_acked;
   
   sock->window.adv_win = adv_win;
-  sock->window.num_inflight = MIN(sock->window.num_inflight, adv_win);
+  // sock->window.num_inflight = MIN(sock->window.num_inflight, adv_win);
 
   return 0;
 }
