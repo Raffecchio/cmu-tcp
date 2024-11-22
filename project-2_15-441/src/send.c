@@ -104,9 +104,19 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
   double now = get_time_ms();
   double elapsed_ms = now - sock->window.last_send;
   int timeout = (sock->window.last_send > 0) && (elapsed_ms >= DEFAULT_TIMEOUT);
-  if ((sock->window.num_inflight > 0) &&
+
+
+  int will_trigger_fast_retransmit = ((sock->window.num_inflight > 0) &&
       (timeout ||
-       (sock->window.dup_ack_cnt >= 3 && sock->is_fast_recovery == 0))) {
+       (sock->window.dup_ack_cnt >= 3 && sock->is_fast_recovery == 0)));
+
+  if (will_trigger_fast_retransmit) {
+    fill_send_win(sock);
+  }
+
+
+
+  if (will_trigger_fast_retransmit) {
     // printf("------------timeout!--------------\n");
     hdr_t *pkt = get_win_pkt(sock, 0);
     sock->window.num_inflight =
@@ -122,9 +132,9 @@ cmu_tcp_header_t *chk_send_pkt(cmu_socket_t *sock) {
     return pkt;
   }
 
-  fill_send_win(sock);
-  uint32_t send_winlen =
+       uint32_t send_winlen =
       MIN(buf_len(&(sock->window.send_win)), sock->window.adv_win);
+
 
   /* send any data in the window that has not been made in-flight */
   uint32_t num_inflight = sock->window.num_inflight;
