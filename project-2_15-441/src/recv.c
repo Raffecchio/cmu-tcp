@@ -56,7 +56,7 @@ static int on_recv_ack(cmu_socket_t* sock, const cmu_tcp_header_t *pkt) {
 
   int is_standalone = (get_payload_len(pkt) == 0);
   int is_dup_ack_incr = ((ack_num == sock->window.last_ack_received)
-    && is_standalone && (sock->window.num_inflight > 0) && ack_valid);
+    && is_standalone && (sock->window.num_inflight > 0));
 
   sock->window.dup_ack_cnt += is_dup_ack_incr;
   
